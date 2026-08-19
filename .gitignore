@@ -35,6 +35,18 @@ frontend/.flutter-plugins-dependencies
 frontend/.packages
 frontend/build/
 frontend/.pub-cache/
+# Flutter generated/build files
+frontend/.dart_tool/
+frontend/build/
+frontend/.flutter-plugins
+frontend/.flutter-plugins-dependencies
+# Flutter platform folders if intentionally not versioning them
+frontend/android/
+frontend/ios/
+frontend/macos/
+frontend/windows/
+frontend/linux/
+frontend/web/
 
 # IDE
 .vscode/
