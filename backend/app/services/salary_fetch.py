@@ -81,7 +81,6 @@ def get_salaries(
     filters = [
         Salary.created_at >= start_datetime,
         Salary.created_at < end_datetime,
-        Salary.is_active.is_(True),
     ]
 
     # --------------------------------------------------

@@ -96,3 +96,57 @@ def deactivate_access_key(
         return False
 
     return True
+
+
+def activate_access_key_by_id(
+    db: Session,
+    key_id: int,
+) -> AccessKey | None:
+    """
+    Activate an access key by its database ID.
+
+    Used by the admin PATCH /admin/access-keys/{id}/activate route.
+
+    Returns:
+        The updated AccessKey on success, or None if not found.
+    """
+
+    access_key = db.scalar(
+        select(AccessKey).where(
+            AccessKey.id == key_id,
+        )
+    )
+
+    if access_key is None:
+        return None
+
+    access_key.active = 1
+
+    return access_key
+
+
+def deactivate_access_key_by_id(
+    db: Session,
+    key_id: int,
+) -> AccessKey | None:
+    """
+    Deactivate an access key by its database ID.
+
+    Used by the admin PATCH /admin/access-keys/{id}/deactivate route.
+
+    Returns:
+        The updated AccessKey on success, or None if not found.
+    """
+
+    access_key = db.scalar(
+        select(AccessKey).where(
+            AccessKey.id == key_id,
+        )
+    )
+
+    if access_key is None:
+        return None
+
+    access_key.active = 0
+
+    return access_key

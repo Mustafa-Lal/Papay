@@ -1,4 +1,5 @@
-from sqlalchemy import Boolean, String
+from datetime import datetime
+from sqlalchemy import DateTime, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base
@@ -25,9 +26,4 @@ class InsuranceCustomer(Base):
         String(20),
         nullable=True,
     )
-
-    is_active: Mapped[bool] = mapped_column(
-        Boolean,
-        nullable=False,
-        default=True,
-    )
+

@@ -47,7 +47,7 @@ def get_insurance_customers(
     # --------------------------------------------------
 
     filters = [
-        InsuranceCustomer.is_active.is_(True),
+        InsuranceInvoice.is_active.is_(True),
     ]
 
     if start_date is not None:

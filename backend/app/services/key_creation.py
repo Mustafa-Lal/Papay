@@ -92,7 +92,7 @@ def create_access_key(
     access_key = AccessKey(
         role_id=role.id,
         key_hash=key_hash,
-        active=1,
+        active=0,
     )
 
     db.add(access_key)

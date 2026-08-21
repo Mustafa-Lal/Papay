@@ -25,18 +25,19 @@ def delete_mechanic_invoice(
             "Mechanic invoice not found."
         )
 
+    from sqlalchemy import update
     # --------------------------------------------------
-    # Delete all items belonging to invoice
+    # Soft-delete all items belonging to invoice
     # --------------------------------------------------
 
     db.execute(
-        delete(MechanicItem).where(
-            MechanicItem.invoice_id == invoice_id
-        )
+        update(MechanicItem)
+        .where(MechanicItem.invoice_id == invoice_id)
+        .values(is_active=False)
     )
 
     # --------------------------------------------------
-    # Delete invoice
+    # Soft-delete invoice
     # --------------------------------------------------
 
-    db.delete(invoice)
+    invoice.is_active = False

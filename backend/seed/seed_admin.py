@@ -7,12 +7,12 @@ from sqlalchemy.orm import Session
 from app.database import engine
 from app.models.access_key import AccessKey
 from app.models.role import Role
-from backend.app.security.hash_generation import hash_activation_key
+from app.security.hash_generation import hash_activation_key
 
 
 load_dotenv()
 
-ADMIN_KEY = "PG-ADMIN-AC12E0-180B72-A55E6F"
+ADMIN_KEY = "ADMIN-D90IN-MC2E0-M8072-I5E6N"
 AUTH_HASH_SECRET = os.getenv("AUTH_HASH_SECRET")
 
 if not AUTH_HASH_SECRET:

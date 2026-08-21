@@ -51,7 +51,7 @@ def get_insurance_invoices_by_plate(
         .where(
             InsuranceInvoice.plate_number
             == plate_number,
-            InsuranceCustomer.is_active.is_(True),
+            InsuranceInvoice.is_active.is_(True),
         )
     )
 
@@ -72,7 +72,7 @@ def get_insurance_invoices_by_plate(
         .where(
             InsuranceInvoice.plate_number
             == plate_number,
-            InsuranceCustomer.is_active.is_(True),
+            InsuranceInvoice.is_active.is_(True),
         )
         .order_by(
             InsuranceInvoice.created_at.desc()

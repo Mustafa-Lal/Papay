@@ -47,7 +47,7 @@ def get_mechanic_customers(
     # --------------------------------------------------
 
     filters = [
-        MechanicCustomer.is_active.is_(True),
+        MechanicInvoice.is_active.is_(True),
     ]
 
     # --------------------------------------------------

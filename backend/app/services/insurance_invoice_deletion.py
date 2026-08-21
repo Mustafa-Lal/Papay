@@ -25,18 +25,19 @@ def delete_insurance_invoice(
             "Insurance invoice not found."
         )
 
+    from sqlalchemy import update
     # --------------------------------------------------
-    # Delete all items belonging to invoice
+    # Soft-delete all items belonging to invoice
     # --------------------------------------------------
 
     db.execute(
-        delete(InsuranceItem).where(
-            InsuranceItem.invoice_id == invoice_id
-        )
+        update(InsuranceItem)
+        .where(InsuranceItem.invoice_id == invoice_id)
+        .values(is_active=False)
     )
 
     # --------------------------------------------------
-    # Delete invoice
+    # Soft-delete invoice
     # --------------------------------------------------
 
-    db.delete(invoice)
+    invoice.is_active = False

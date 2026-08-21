@@ -10,6 +10,7 @@ quantity, unit price, and the applicable commission logic.
 from decimal import Decimal
 
 from sqlalchemy import (
+    Boolean,
     ForeignKey,
     Numeric,
     String,
@@ -52,4 +53,10 @@ class InsuranceItem(Base):
         Numeric(12, 2),
         nullable=False,
         default=Decimal("0.00"),
+    )
+
+    is_active: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=True,
     )

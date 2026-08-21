@@ -224,7 +224,7 @@ class InsuranceInvoiceCreate(BaseModel):
     )
 
     items: list[InsuranceItemCreate] = Field(
-        min_length=1,
+        default_factory=list,
     )
 
     @field_validator("plate_number")

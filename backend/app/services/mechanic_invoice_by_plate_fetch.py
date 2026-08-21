@@ -51,7 +51,7 @@ def get_mechanic_invoices_by_plate(
         .where(
             MechanicInvoice.plate_number
             == plate_number,
-            MechanicCustomer.is_active.is_(True),
+            MechanicInvoice.is_active.is_(True),
         )
     )
 
@@ -72,7 +72,7 @@ def get_mechanic_invoices_by_plate(
         .where(
             MechanicInvoice.plate_number
             == plate_number,
-            MechanicCustomer.is_active.is_(True),
+            MechanicInvoice.is_active.is_(True),
         )
         .order_by(
             MechanicInvoice.created_at.desc()

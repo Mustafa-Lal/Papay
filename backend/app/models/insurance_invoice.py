@@ -12,6 +12,7 @@ from decimal import Decimal
 from enum import Enum
 
 from sqlalchemy import (
+    Boolean,
     DateTime,
     Enum as SQLEnum,
     ForeignKey,
@@ -74,4 +75,10 @@ class InsuranceInvoice(Base):
         DateTime,
         nullable=False,
         default=datetime.utcnow,
+    )
+
+    is_active: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=True,
     )

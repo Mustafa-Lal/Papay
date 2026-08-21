@@ -33,8 +33,7 @@ def get_mechanic_customer_details(
 
     customer = db.scalar(
         select(MechanicCustomer).where(
-            MechanicCustomer.id == customer_id,
-            MechanicCustomer.is_active.is_(True),
+            MechanicCustomer.id == customer_id
         )
     )
 
@@ -50,7 +49,8 @@ def get_mechanic_customer_details(
     invoices = db.scalars(
         select(MechanicInvoice)
         .where(
-            MechanicInvoice.customer_id == customer_id
+            MechanicInvoice.customer_id == customer_id,
+            MechanicInvoice.is_active.is_(True)
         )
         .order_by(
             MechanicInvoice.created_at.desc()
@@ -74,7 +74,8 @@ def get_mechanic_customer_details(
         items = db.scalars(
             select(MechanicItem)
             .where(
-                MechanicItem.invoice_id == invoice.id
+                MechanicItem.invoice_id == invoice.id,
+                MechanicItem.is_active.is_(True)
             )
             .order_by(
                 MechanicItem.id.asc()
@@ -115,4 +116,58 @@ def get_mechanic_customer_details(
             "qid": customer.qid,
         },
         "invoices": invoice_details,
+    }
+
+
+def get_mechanic_invoice_full_details(db: Session, invoice_id: int) -> dict | None:
+    # Fetch invoice
+    invoice = db.scalar(
+        select(MechanicInvoice).where(
+            MechanicInvoice.id == invoice_id,
+            MechanicInvoice.is_active.is_(True)
+        )
+    )
+    if invoice is None:
+        return None
+
+    # Fetch customer
+    customer = db.scalar(
+        select(MechanicCustomer).where(MechanicCustomer.id == invoice.customer_id)
+    )
+
+    # Fetch items
+    items = db.scalars(
+        select(MechanicItem)
+        .where(
+            MechanicItem.invoice_id == invoice.id,
+            MechanicItem.is_active.is_(True)
+        )
+        .order_by(MechanicItem.id.asc())
+    ).all()
+
+    return {
+        "id": invoice.id,
+        "customer_id": invoice.customer_id,
+        "plate_number": invoice.plate_number,
+        "labor_charges": invoice.labor_charges,
+        "payment_status": invoice.payment_status.value,
+        "created_by": invoice.created_by,
+        "created_at": invoice.created_at,
+        "customer": {
+            "id": customer.id,
+            "customer_name": customer.customer_name,
+            "phone_number": customer.phone_number,
+            "qid": customer.qid,
+        },
+        "items": [
+            {
+                "id": item.id,
+                "invoice_id": item.invoice_id,
+                "description": item.description,
+                "quantity": item.quantity,
+                "unit_price": item.unit_price,
+                "commission": item.commission,
+            }
+            for item in items
+        ]
     }

@@ -34,8 +34,7 @@ def get_insurance_customer_details(
 
     customer = db.scalar(
         select(InsuranceCustomer).where(
-            InsuranceCustomer.id == customer_id,
-            InsuranceCustomer.is_active.is_(True),
+            InsuranceCustomer.id == customer_id
         )
     )
 
@@ -51,7 +50,8 @@ def get_insurance_customer_details(
     invoices = db.scalars(
         select(InsuranceInvoice)
         .where(
-            InsuranceInvoice.customer_id == customer_id
+            InsuranceInvoice.customer_id == customer_id,
+            InsuranceInvoice.is_active.is_(True)
         )
         .order_by(
             InsuranceInvoice.created_at.desc()
@@ -75,7 +75,8 @@ def get_insurance_customer_details(
         items = db.scalars(
             select(InsuranceItem)
             .where(
-                InsuranceItem.invoice_id == invoice.id
+                InsuranceItem.invoice_id == invoice.id,
+                InsuranceItem.is_active.is_(True)
             )
             .order_by(
                 InsuranceItem.id.asc()
@@ -149,3 +150,73 @@ def get_insurance_customer_details(
         },
         "invoices": invoice_details,
     }
+
+
+def get_insurance_invoice_full_details(db: Session, invoice_id: int) -> dict | None:
+    # Fetch invoice
+    invoice = db.scalar(
+        select(InsuranceInvoice).where(
+            InsuranceInvoice.id == invoice_id,
+            InsuranceInvoice.is_active.is_(True)
+        )
+    )
+    if invoice is None:
+        return None
+
+    # Fetch customer
+    customer = db.scalar(
+        select(InsuranceCustomer).where(InsuranceCustomer.id == invoice.customer_id)
+    )
+
+    # Fetch items
+    items = db.scalars(
+        select(InsuranceItem)
+        .where(
+            InsuranceItem.invoice_id == invoice.id,
+            InsuranceItem.is_active.is_(True)
+        )
+        .order_by(InsuranceItem.id.asc())
+    ).all()
+
+    # Fetch images
+    images = db.scalars(
+        select(InsuranceImage)
+        .where(InsuranceImage.invoice_id == invoice.id)
+        .order_by(InsuranceImage.id.asc())
+    ).all()
+
+    return {
+        "id": invoice.id,
+        "customer_id": invoice.customer_id,
+        "plate_number": invoice.plate_number,
+        "labor_charges": invoice.labor_charges,
+        "payment_status": invoice.payment_status.value,
+        "created_by": invoice.created_by,
+        "created_at": invoice.created_at,
+        "customer": {
+            "id": customer.id,
+            "customer_name": customer.customer_name,
+            "phone_number": customer.phone_number,
+            "qid": customer.qid,
+        },
+        "items": [
+            {
+                "id": item.id,
+                "invoice_id": item.invoice_id,
+                "description": item.description,
+                "quantity": item.quantity,
+                "unit_price": item.unit_price,
+                "commission": item.commission,
+            }
+            for item in items
+        ],
+        "images": [
+            {
+                "id": image.id,
+                "invoice_id": image.invoice_id,
+                "image_type": image.image_type.value,
+                "file_path": image.file_path,
+            }
+            for image in images
+        ]
+    }

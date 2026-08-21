@@ -212,7 +212,7 @@ class MechanicInvoiceCreate(BaseModel):
     )
 
     items: list[MechanicItemCreate] = Field(
-        min_length=1,
+        default_factory=list,
     )
 
     @field_validator("plate_number")
