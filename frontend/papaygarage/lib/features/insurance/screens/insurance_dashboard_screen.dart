@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../../../core/auth/auth_state.dart';
 import '../models/insurance_models.dart';
-import '../providers/insurance_state.dart';
 import 'create_invoice_screen.dart';
 import 'invoice_detail_screen.dart';
 import '../../../core/widgets/plate_search_bar.dart';
@@ -34,6 +33,12 @@ const _paidBg = Color(0xFFE7F5EC);
 
 const double _radius = 10;
 const double _cardPadding = 24;
+
+// ──────────────────────────────────────────────
+// Responsive tokens
+// ──────────────────────────────────────────────
+const double _mobileBreakpoint = 800.0;
+const double _cardPaddingMobile = 16;
 
 
 
@@ -128,40 +133,48 @@ class _InsuranceDashboardScreenState extends State<InsuranceDashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = screenWidth < _mobileBreakpoint;
+
     return Scaffold(
       backgroundColor: _bg,
-      body: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-        child: Column(
-          children: [
-            _buildTopbar(),
-            const SizedBox(height: 14),
-            const SizedBox(height: 14),
-            Expanded(
-              child: Container(
-                decoration: BoxDecoration(
-                  color: _surface,
-                  borderRadius: BorderRadius.circular(_radius),
-                  boxShadow: const [
-                    BoxShadow(color: Color(0x0A1C1B1A), blurRadius: 4, offset: Offset(0, 1)),
-                    BoxShadow(color: Color(0x1A1C1B1A), blurRadius: 24, offset: Offset(0, 8)),
-                  ],
-                ),
-                child: Column(
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.all(_cardPadding),
-                      child: _buildCardHeader(),
-                    ),
-                    const Divider(height: 1, color: _border),
-                    Expanded(child: _buildList()),
-                    const Divider(height: 1, color: _border),
-                    _buildFooter(),
-                  ],
+      body: SafeArea(
+        child: Padding(
+          padding: EdgeInsets.symmetric(
+            horizontal: isMobile ? 12 : 24,
+            vertical: isMobile ? 16 : 32,
+          ),
+          child: Column(
+            children: [
+              _buildTopbar(isMobile),
+              const SizedBox(height: 14),
+              const SizedBox(height: 14),
+              Expanded(
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: _surface,
+                    borderRadius: BorderRadius.circular(_radius),
+                    boxShadow: const [
+                      BoxShadow(color: Color(0x0A1C1B1A), blurRadius: 4, offset: Offset(0, 1)),
+                      BoxShadow(color: Color(0x1A1C1B1A), blurRadius: 24, offset: Offset(0, 8)),
+                    ],
+                  ),
+                  child: Column(
+                    children: [
+                      Padding(
+                        padding: EdgeInsets.all(isMobile ? _cardPaddingMobile : _cardPadding),
+                        child: _buildCardHeader(isMobile),
+                      ),
+                      const Divider(height: 1, color: _border),
+                      Expanded(child: _buildList(isMobile)),
+                      const Divider(height: 1, color: _border),
+                      _buildFooter(isMobile),
+                    ],
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -169,9 +182,51 @@ class _InsuranceDashboardScreenState extends State<InsuranceDashboardScreen> {
 
   // Dark rounded topbar with the orange brand-icon block, matching the
   // mockup's `.topbar` / `.brand` / `.brand-icon`.
-  Widget _buildTopbar() {
+  Widget _buildTopbar(bool isMobile) {
+    final brandRow = Row(
+      children: [
+        Container(
+          width: isMobile ? 40 : 52,
+          height: isMobile ? 40 : 52,
+          decoration: BoxDecoration(
+            color: _accent,
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(Icons.shield_outlined, color: Colors.white, size: isMobile ? 20 : 26),
+        ),
+        SizedBox(width: isMobile ? 12 : 16),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'INSURANCE WORKSPACE',
+                style: GoogleFonts.oswald(
+                    fontSize: isMobile ? 16 : 24, color: _accentDark, fontWeight: FontWeight.w900),
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 2),
+              Text(
+                'Manage and track all insurance invoices',
+                style: const TextStyle(fontSize: 13.5, color: Color(0xFF9CA3AF)),
+                maxLines: isMobile ? 2 : 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+
+    final logoutButton = _topbarGhostButton(
+      icon: Icons.logout,
+      label: 'Log out',
+      onPressed: () => context.read<AuthState>().logout(),
+      isMobile: isMobile,
+    );
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 22),
+      padding: EdgeInsets.symmetric(horizontal: isMobile ? 16 : 28, vertical: isMobile ? 16 : 22),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(_radius),
@@ -180,44 +235,22 @@ class _InsuranceDashboardScreenState extends State<InsuranceDashboardScreen> {
           BoxShadow(color: Color(0x1A1C1B1A), blurRadius: 24, offset: Offset(0, 8)),
         ],
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 52,
-                height: 52,
-                decoration: BoxDecoration(
-                  color: _accent,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Icon(Icons.shield_outlined, color: Colors.white, size: 26),
-              ),
-              const SizedBox(width: 16),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'INSURANCE WORKSPACE',
-                    style: GoogleFonts.oswald(fontSize: 24, color: _accentDark, fontWeight: FontWeight.w900),
-                  ),
-                  const SizedBox(height: 2),
-                  const Text(
-                    'Manage and track all insurance invoices',
-                    style: TextStyle(fontSize: 13.5, color: Color(0xFF9CA3AF)),
-                  ),
-                ],
-              ),
-            ],
-          ),
-          _topbarGhostButton(
-            icon: Icons.logout,
-            label: 'Log out',
-            onPressed: () => context.read<AuthState>().logout(),
-          ),
-        ],
-      ),
+      child: isMobile
+          ? Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                brandRow,
+                const SizedBox(height: 14),
+                SizedBox(width: double.infinity, child: logoutButton),
+              ],
+            )
+          : Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(child: brandRow),
+                logoutButton,
+              ],
+            ),
     );
   }
 
@@ -225,6 +258,7 @@ class _InsuranceDashboardScreenState extends State<InsuranceDashboardScreen> {
     required IconData icon,
     required String label,
     required VoidCallback onPressed,
+    bool isMobile = false,
   }) {
     return OutlinedButton.icon(
       onPressed: onPressed,
@@ -235,7 +269,7 @@ class _InsuranceDashboardScreenState extends State<InsuranceDashboardScreen> {
         backgroundColor: _accent,
         side: const BorderSide(color: _accentDark),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+        padding: EdgeInsets.symmetric(horizontal: 16, vertical: isMobile ? 14 : 20),
         textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
       ).copyWith(
         backgroundColor: WidgetStateProperty.resolveWith((states) {
@@ -246,52 +280,105 @@ class _InsuranceDashboardScreenState extends State<InsuranceDashboardScreen> {
     );
   }
 
-  Widget _buildCardHeader() {
+  Widget _buildCardHeader(bool isMobile) {
+    final titleBlock = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'INVOICES',
+          style: GoogleFonts.oswald(fontSize: isMobile ? 17 : 20, color: _ink, fontWeight: FontWeight.w600, letterSpacing: 0.3),
+        ),
+        const SizedBox(height: 4),
+        const Text(
+          'View, edit and manage all insurance records',
+          style: TextStyle(fontSize: 14, color: _muted),
+        ),
+      ],
+    );
+
+    final durationButton = SizedBox(
+      height: 45,
+      width: isMobile ? double.infinity : null,
+      child: OutlinedButton.icon(
+        onPressed: _pickDateRange,
+        icon: const Icon(Icons.calendar_today_outlined, size: 16, color: _accent),
+        label: Text(_selectedDateRange == null
+            ? 'Duration'
+            : '${DateFormat('MMM d').format(_selectedDateRange!.start)} - ${DateFormat('MMM d').format(_selectedDateRange!.end)}', style: const TextStyle(color: _accent)),
+        style: OutlinedButton.styleFrom(
+          foregroundColor: _ink,
+          backgroundColor: const Color.fromARGB(93, 184, 134, 58),
+          side: const BorderSide(color: _accent),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+        ).copyWith(
+          side: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.hovered)) return const BorderSide(color: _muted2);
+            return const BorderSide(color: _accent);
+          }),
+        ),
+      ),
+    );
+
+    final newInvoiceButton = SizedBox(
+      height: 45,
+      width: isMobile ? double.infinity : null,
+      child: ElevatedButton.icon(
+        onPressed: _goToCreate,
+        icon: const Icon(Icons.add, size: 18),
+        label: const Text('New Invoice'),
+        style: ElevatedButton.styleFrom(
+          foregroundColor: Colors.white,
+          backgroundColor: _accent,
+          elevation: 0,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+        ).copyWith(
+          backgroundColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.hovered)) return _accentDark;
+            return _accent;
+          }),
+        ),
+      ),
+    );
+
+    if (isMobile) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          titleBlock,
+          const SizedBox(height: 16),
+          LayoutBuilder(
+            builder: (context, constraints) => _buildSearchBar(constraints.maxWidth),
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(child: durationButton),
+              if (_selectedDateRange != null) ...[
+                const SizedBox(width: 6),
+                IconButton(
+                  icon: const Icon(Icons.clear, color: _muted),
+                  onPressed: _clearSearch,
+                ),
+              ],
+            ],
+          ),
+          const SizedBox(height: 10),
+          newInvoiceButton,
+        ],
+      );
+    }
+
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'INVOICES',
-                style: GoogleFonts.oswald(fontSize: 20, color: _ink, fontWeight: FontWeight.w600, letterSpacing: 0.3),
-              ),
-              const SizedBox(height: 4),
-              const Text(
-                'View, edit and manage all insurance records',
-                style: TextStyle(fontSize: 14, color: _muted),
-              ),
-            ],
-          ),
-        ),
+        Expanded(child: titleBlock),
         const SizedBox(width: 20),
-        _buildSearchBar(),
+        _buildSearchBar(220),
         const SizedBox(width: 10),
-        SizedBox(
-          height: 45,
-          child: OutlinedButton.icon(
-            onPressed: _pickDateRange,
-            icon: const Icon(Icons.calendar_today_outlined, size: 16, color: _accent),
-            label: Text(_selectedDateRange == null
-                ? 'Duration'
-                : '${DateFormat('MMM d').format(_selectedDateRange!.start)} - ${DateFormat('MMM d').format(_selectedDateRange!.end)}', style: const TextStyle(color: _accent)),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: _ink,
-              backgroundColor: const Color.fromARGB(93, 184, 134, 58),
-              side: const BorderSide(color: _accent),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-            ).copyWith(
-              side: WidgetStateProperty.resolveWith((states) {
-                if (states.contains(WidgetState.hovered)) return const BorderSide(color: _muted2);
-                return const BorderSide(color: _accent);
-              }),
-            ),
-          ),
-        ),
+        durationButton,
         if (_selectedDateRange != null) ...[
           const SizedBox(width: 6),
           IconButton(
@@ -300,45 +387,29 @@ class _InsuranceDashboardScreenState extends State<InsuranceDashboardScreen> {
           ),
         ],
         const SizedBox(width: 10),
-        SizedBox(
-          height: 45,
-          child: ElevatedButton.icon(
-            onPressed: _goToCreate,
-            icon: const Icon(Icons.add, size: 18),
-            label: const Text('New Invoice'),
-            style: ElevatedButton.styleFrom(
-              foregroundColor: Colors.white,
-              backgroundColor: _accent,
-              elevation: 0,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-              textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-            ).copyWith(
-              backgroundColor: WidgetStateProperty.resolveWith((states) {
-                if (states.contains(WidgetState.hovered)) return _accentDark;
-                return _accent;
-              }),
-            ),
-          ),
-        ),
+        newInvoiceButton,
       ],
     );
   }
 
-  Widget _buildSearchBar() {
+  Widget _buildSearchBar(double width) {
     return PlateSearchBar(
       controller: _plateController,
-      width: 220,
+      width: width,
       onSubmitted: (_) => _search(),
     );
   }
 
-  Widget _buildFooter() {
+  Widget _buildFooter(bool isMobile) {
     return Consumer<InsuranceState>(
       builder: (context, state, _) {
         if (state.invoices.isEmpty) return const SizedBox.shrink();
         final count = state.invoices.length;
         return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: _cardPadding, vertical: 14),
+          padding: EdgeInsets.symmetric(
+            horizontal: isMobile ? _cardPaddingMobile : _cardPadding,
+            vertical: 14,
+          ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -371,12 +442,12 @@ class _InsuranceDashboardScreenState extends State<InsuranceDashboardScreen> {
           border: Border.all(color: _border),
           borderRadius: BorderRadius.circular(7),
         ),
-        child: Icon(icon, size: 16, color: enabled ? _ink : _muted2.withOpacity(0.5)),
+        child: Icon(icon, size: 16, color: enabled ? _ink : _muted2.withValues(alpha: 0.5)),
       ),
     );
   }
 
-  Widget _buildList() {
+  Widget _buildList(bool isMobile) {
     return Consumer<InsuranceState>(
       builder: (context, state, _) {
         if (state.isLoading && state.invoices.isEmpty) {
@@ -390,12 +461,20 @@ class _InsuranceDashboardScreenState extends State<InsuranceDashboardScreen> {
               children: [
                 const Icon(Icons.inbox_outlined, size: 38, color: _muted2),
                 const SizedBox(height: 12),
-                Text(
+                const Text(
                   'No invoices yet. Create one to get started.',
-                  style: const TextStyle(color: _muted, fontSize: 15),
+                  style: TextStyle(color: _muted, fontSize: 15),
                 ),
               ],
             ),
+          );
+        }
+
+        if (isMobile) {
+          return ListView.builder(
+            padding: const EdgeInsets.symmetric(horizontal: _cardPaddingMobile, vertical: 12),
+            itemCount: state.invoices.length,
+            itemBuilder: (context, i) => _buildMobileInvoiceCard(state.invoices[i]),
           );
         }
 
@@ -482,6 +561,81 @@ class _InsuranceDashboardScreenState extends State<InsuranceDashboardScreen> {
     );
   }
 
+  // Mobile-only card representation of an invoice row — a table doesn't
+  // reflow well on narrow screens, so this mirrors the same data/actions
+  // as the DataTable row in a stacked, touch-friendly layout.
+  Widget _buildMobileInvoiceCard(InsuranceInvoiceSummary inv) {
+    final statusColor = _statusColor(inv.paymentStatus);
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: _surface,
+        border: Border.all(color: _border),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(width: 4, height: 32, color: statusColor),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  inv.name ?? '—',
+                  style: const TextStyle(fontWeight: FontWeight.w600, color: _ink, fontSize: 14.5),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              const SizedBox(width: 8),
+              _buildPlateBadge(inv.plateNumber),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              _buildBadge(inv.paymentStatus),
+              const Spacer(),
+              Text(
+                DateFormat('MMM dd, yyyy').format(inv.invoiceDate),
+                style: GoogleFonts.jetBrainsMono(fontSize: 13, color: _ink),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: _buildActionButton(
+                  icon: Icons.visibility_outlined,
+                  label: 'View',
+                  textColor: _steel,
+                  bgColor: _steelTint,
+                  hoverColor: const Color(0xFFDCE9F2),
+                  onTap: () => _goToDetail(inv),
+                  center: true,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildActionButton(
+                  icon: Icons.delete_outline,
+                  label: 'Delete',
+                  textColor: _unpaid,
+                  bgColor: _unpaidBg,
+                  hoverColor: const Color(0xFFF6D9D9),
+                  onTap: () => _confirmDelete(inv),
+                  center: true,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
   // Mimics the mockup's `.tag-bar` — a thin colored strip on the leading
   // edge of the row, plus the customer name / sub-label stack.
   Widget _buildCustomerCell(InsuranceInvoiceSummary inv, Color statusColor) {
@@ -565,19 +719,22 @@ class _InsuranceDashboardScreenState extends State<InsuranceDashboardScreen> {
     required Color bgColor,
     required Color hoverColor,
     required VoidCallback onTap,
+    bool center = false,
   }) {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(7),
       hoverColor: hoverColor,
       child: Container(
+        width: center ? double.infinity : null,
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
           color: bgColor,
           borderRadius: BorderRadius.circular(7),
         ),
         child: Row(
-          mainAxisSize: MainAxisSize.min,
+          mainAxisSize: center ? MainAxisSize.max : MainAxisSize.min,
+          mainAxisAlignment: center ? MainAxisAlignment.center : MainAxisAlignment.start,
           children: [
             Icon(icon, size: 14, color: textColor),
             const SizedBox(width: 5),
@@ -591,63 +748,71 @@ class _InsuranceDashboardScreenState extends State<InsuranceDashboardScreen> {
   Future<void> _confirmDelete(InsuranceInvoiceSummary inv) async {
     final ok = await showDialog<bool>(
       context: context,
-      builder: (ctx) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        child: Container(
-          width: 380,
-          padding: const EdgeInsets.all(28),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(color: _unpaidBg, borderRadius: BorderRadius.circular(10)),
-                child: const Icon(Icons.delete_outline_rounded, color: _unpaid, size: 22),
-              ),
-              const SizedBox(height: 16),
-              const Text('Delete Invoice', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: _ink)),
-              const SizedBox(height: 8),
-              Text(
-                'Delete invoice #${inv.invoiceId} for ${inv.name ?? "this customer"}? This cannot be undone.',
-                style: const TextStyle(fontSize: 14, color: _muted, height: 1.5),
-              ),
-              const SizedBox(height: 24),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () => Navigator.pop(ctx, false),
-                      style: OutlinedButton.styleFrom(
-                        side: const BorderSide(color: _border),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                        padding: const EdgeInsets.symmetric(vertical: 13),
-                        foregroundColor: _ink,
-                      ),
-                      child: const Text('Cancel', style: TextStyle(fontWeight: FontWeight.w600)),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: () => Navigator.pop(ctx, true),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: _unpaid,
-                        foregroundColor: Colors.white,
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                        padding: const EdgeInsets.symmetric(vertical: 13),
-                      ),
-                      child: const Text('Delete', style: TextStyle(fontWeight: FontWeight.w700)),
-                    ),
-                  ),
-                ],
-              ),
-            ],
+      builder: (ctx) {
+        final dialogWidth = MediaQuery.of(ctx).size.width;
+        final isMobileDialog = dialogWidth < _mobileBreakpoint;
+        return Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          insetPadding: EdgeInsets.symmetric(
+            horizontal: isMobileDialog ? 20 : (dialogWidth - 380) / 2,
+            vertical: 24,
           ),
-        ),
-      ),
+          child: Container(
+            width: isMobileDialog ? double.infinity : 380,
+            padding: const EdgeInsets.all(28),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(color: _unpaidBg, borderRadius: BorderRadius.circular(10)),
+                  child: const Icon(Icons.delete_outline_rounded, color: _unpaid, size: 22),
+                ),
+                const SizedBox(height: 16),
+                const Text('Delete Invoice', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: _ink)),
+                const SizedBox(height: 8),
+                Text(
+                  'Delete invoice #${inv.invoiceId} for ${inv.name ?? "this customer"}? This cannot be undone.',
+                  style: const TextStyle(fontSize: 14, color: _muted, height: 1.5),
+                ),
+                const SizedBox(height: 24),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.pop(ctx, false),
+                        style: OutlinedButton.styleFrom(
+                          side: const BorderSide(color: _border),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          padding: const EdgeInsets.symmetric(vertical: 13),
+                          foregroundColor: _ink,
+                        ),
+                        child: const Text('Cancel', style: TextStyle(fontWeight: FontWeight.w600)),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () => Navigator.pop(ctx, true),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: _unpaid,
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          padding: const EdgeInsets.symmetric(vertical: 13),
+                        ),
+                        child: const Text('Delete', style: TextStyle(fontWeight: FontWeight.w700)),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
     if (ok == true && mounted) {
       context.read<InsuranceState>().deleteInvoice(inv.invoiceId);

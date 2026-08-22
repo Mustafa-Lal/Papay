@@ -23,6 +23,9 @@ const _cardShadow = BoxShadow(
   offset: Offset(0, 8),
 );
 
+// Anything narrower than this is treated as "mobile" layout.
+const double _mobileBreakpoint = 700;
+
 class MechanicInvoiceDetailScreen extends StatefulWidget {
   final int invoiceId;
   const MechanicInvoiceDetailScreen({super.key, required this.invoiceId});
@@ -89,34 +92,47 @@ class _MechanicInvoiceDetailScreenState extends State<MechanicInvoiceDetailScree
                     ),
                   ],
                 ))
-              : _buildBody(),
+              : LayoutBuilder(
+                  builder: (context, constraints) {
+                    final bool isMobile = constraints.maxWidth < _mobileBreakpoint;
+                    return _buildBody(isMobile);
+                  },
+                ),
     );
   }
 
-  Widget _buildBody() {
+  Widget _buildBody(bool isMobile) {
     final inv = _invoice!;
-    
+
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 32),
+      padding: EdgeInsets.symmetric(
+        horizontal: isMobile ? 16 : 40,
+        vertical: isMobile ? 20 : 32,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _buildHeader(inv),
-          const SizedBox(height: 32),
+          _buildHeader(inv, isMobile),
+          SizedBox(height: isMobile ? 20 : 32),
           Expanded(
             child: SingleChildScrollView(
               child: Column(
                 children: [
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(child: _InvoiceDetailsCard(invoice: inv)),
-                      const SizedBox(width: 24),
-                      Expanded(child: _CustomerCard(invoice: inv, onRefresh: _load)),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-                  _RepairItemsCard(invoice: inv),
+                  if (isMobile) ...[
+                    _InvoiceDetailsCard(invoice: inv),
+                    const SizedBox(height: 16),
+                    _CustomerCard(invoice: inv, onRefresh: _load),
+                  ] else
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(child: _InvoiceDetailsCard(invoice: inv)),
+                        const SizedBox(width: 24),
+                        Expanded(child: _CustomerCard(invoice: inv, onRefresh: _load)),
+                      ],
+                    ),
+                  SizedBox(height: isMobile ? 16 : 24),
+                  _RepairItemsCard(invoice: inv, isMobile: isMobile),
                 ],
               ),
             ),
@@ -126,8 +142,122 @@ class _MechanicInvoiceDetailScreenState extends State<MechanicInvoiceDetailScree
     );
   }
 
-  Widget _buildHeader(MechanicInvoice inv) {
+  Widget _buildHeader(MechanicInvoice inv, bool isMobile) {
     final isPaid = inv.paymentStatus == PaymentStatus.paid;
+
+    final backButton = OutlinedButton(
+      onPressed: () => Navigator.pop(context, _hasChanges),
+      style: OutlinedButton.styleFrom(
+        padding: EdgeInsets.all(isMobile ? 14 : 20),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        side: const BorderSide(color: _border, width: 1.5),
+        backgroundColor: _cardBg,
+        foregroundColor: _ink,
+      ),
+      child: Icon(Icons.arrow_back, size: isMobile ? 18 : 20, color: _ink),
+    );
+
+    final actionButtons = <Widget>[
+      OutlinedButton.icon(
+        onPressed: () {
+          if (_invoice != null) {
+            printMechanicInvoice(context, _invoice!);
+          }
+        },
+        icon: const Icon(Icons.print_outlined, size: 16),
+        label: const Text('Print'),
+        style: OutlinedButton.styleFrom(
+          foregroundColor: _ink,
+          backgroundColor: _cardBg,
+          side: const BorderSide(color: _border, width: 1.5),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          padding: EdgeInsets.symmetric(horizontal: 20, vertical: isMobile ? 14 : 20),
+          textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13.5),
+        ),
+      ),
+      OutlinedButton.icon(
+        onPressed: () async {
+          if (_invoice == null) return;
+          final changed = await Navigator.push<bool>(
+            context,
+            MaterialPageRoute(
+              builder: (_) => EditInvoiceScreen(invoice: _invoice!),
+            ),
+          );
+          if (mounted && changed == true) {
+            setState(() { _hasChanges = true; });
+            _load();
+          }
+        },
+        icon: const Icon(Icons.edit_outlined, size: 16),
+        label: const Text('Edit'),
+        style: OutlinedButton.styleFrom(
+          foregroundColor: _ink,
+          backgroundColor: _cardBg,
+          side: const BorderSide(color: _border, width: 1.5),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          padding: EdgeInsets.symmetric(horizontal: 20, vertical: isMobile ? 14 : 20),
+          textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13.5),
+        ),
+      ),
+      if (!isPaid)
+        ElevatedButton.icon(
+          onPressed: _markAsPaid,
+          icon: const Icon(Icons.check_circle_outline, size: 16, color: Colors.white),
+          label: const Text('Mark as Paid'),
+          style: ElevatedButton.styleFrom(
+            foregroundColor: Colors.white,
+            backgroundColor: _gold,
+            elevation: 0,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            padding: EdgeInsets.symmetric(horizontal: 20, vertical: isMobile ? 14 : 20),
+            textStyle: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13.5),
+          ),
+        ),
+    ];
+
+    if (isMobile) {
+      // Stack the header vertically and let the action buttons wrap —
+      // the desktop single Row would overflow on narrow screens.
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              backButton,
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Invoice #${inv.id}',
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: _ink, letterSpacing: -0.5),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              _buildBadge(inv.paymentStatus),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'Generated on ${DateFormat('MMMM dd, yyyy').format(inv.invoiceDate)}',
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 13, color: _muted),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: actionButtons,
+          ),
+        ],
+      );
+    }
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -138,17 +268,7 @@ class _MechanicInvoiceDetailScreenState extends State<MechanicInvoiceDetailScree
           children: [
             Row(
               children: [
-                OutlinedButton(
-                  onPressed: () => Navigator.pop(context, _hasChanges),
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.all(20),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                    side: const BorderSide(color: _border, width: 1.5),
-                    backgroundColor: _cardBg,
-                    foregroundColor: _ink,
-                  ),
-                  child: const Icon(Icons.arrow_back, size: 20, color: _ink),
-                ),
+                backButton,
                 const SizedBox(width: 16),
                 Text(
                   'Invoice #${inv.id}',
@@ -167,64 +287,13 @@ class _MechanicInvoiceDetailScreenState extends State<MechanicInvoiceDetailScree
         ),
         Row(
           children: [
-            OutlinedButton.icon(
-              onPressed: () {
-                if (_invoice != null) {
-                  printMechanicInvoice(context, _invoice!);
-                }
-              },
-              icon: const Icon(Icons.print_outlined, size: 16),
-              label: const Text('Print'),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: _ink,
-                backgroundColor: _cardBg,
-                side: const BorderSide(color: _border, width: 1.5),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
-                textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13.5),
-              ),
-            ),
+            actionButtons[0],
             const SizedBox(width: 12),
-            OutlinedButton.icon(
-              onPressed: () async {
-                if (_invoice == null) return;
-                final changed = await Navigator.push<bool>(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => EditInvoiceScreen(invoice: _invoice!),
-                  ),
-                );
-                if (mounted && changed == true) {
-                  setState(() { _hasChanges = true; });
-                  _load();
-                }
-              },
-              icon: const Icon(Icons.edit_outlined, size: 16),
-              label: const Text('Edit'),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: _ink,
-                backgroundColor: _cardBg,
-                side: const BorderSide(color: _border, width: 1.5),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
-                textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13.5),
-              ),
-            ),
-            const SizedBox(width: 12),
-            if (!isPaid)
-              ElevatedButton.icon(
-                onPressed: _markAsPaid,
-                icon: const Icon(Icons.check_circle_outline, size: 16, color: Colors.white),
-                label: const Text('Mark as Paid'),
-                style: ElevatedButton.styleFrom(
-                  foregroundColor: Colors.white,
-                  backgroundColor: _gold,
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
-                  textStyle: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13.5),
-                ),
-              ),
+            actionButtons[1],
+            if (actionButtons.length > 2) ...[
+              const SizedBox(width: 12),
+              actionButtons[2],
+            ],
           ],
         ),
       ],
@@ -380,19 +449,31 @@ class _CustomerCard extends StatelessWidget {
                   child: Text(initial, style: const TextStyle(color: _gold, fontWeight: FontWeight.w800, fontSize: 18)),
                 ),
                 const SizedBox(width: 16),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(c.customerName ?? 'Unknown', style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16, color: _ink)),
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        const Icon(Icons.phone_outlined, size: 14, color: _muted),
-                        const SizedBox(width: 4),
-                        Text(c.phoneNumber ?? 'No Phone', style: const TextStyle(color: _muted, fontSize: 13)),
-                      ],
-                    ),
-                  ],
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        c.customerName ?? 'Unknown',
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16, color: _ink),
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          const Icon(Icons.phone_outlined, size: 14, color: _muted),
+                          const SizedBox(width: 4),
+                          Flexible(
+                            child: Text(
+                              c.phoneNumber ?? 'No Phone',
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(color: _muted, fontSize: 13),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -432,13 +513,14 @@ class _InfoBlock extends StatelessWidget {
 // ─────────────────────────────────────────────────────────
 class _RepairItemsCard extends StatelessWidget {
   final MechanicInvoice invoice;
-  const _RepairItemsCard({required this.invoice});
+  final bool isMobile;
+  const _RepairItemsCard({required this.invoice, this.isMobile = false});
 
   @override
   Widget build(BuildContext context) {
     return _StyledCard(
       child: Padding(
-        padding: const EdgeInsets.all(24.0),
+        padding: EdgeInsets.all(isMobile ? 16.0 : 24.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -454,88 +536,169 @@ class _RepairItemsCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 24),
-            // Header Row
-            Padding(
-              padding: const EdgeInsets.only(bottom: 16),
-              child: Row(
-                children: const [
-                  SizedBox(width: 40, child: Text('#', style: TextStyle(color: _muted, fontSize: 12, fontWeight: FontWeight.w600))),
-                  Expanded(flex: 3, child: Text('Description', style: TextStyle(color: _muted, fontSize: 12, fontWeight: FontWeight.w600))),
-                  Expanded(flex: 1, child: Text('Qty', style: TextStyle(color: _muted, fontSize: 12, fontWeight: FontWeight.w600))),
-                  Expanded(flex: 1, child: Text('Unit Price', style: TextStyle(color: _muted, fontSize: 12, fontWeight: FontWeight.w600))),
-                  Expanded(flex: 1, child: Text('Commission', style: TextStyle(color: _muted, fontSize: 12, fontWeight: FontWeight.w600))),
-                  Expanded(flex: 1, child: Align(alignment: Alignment.centerRight, child: Text('Amount (QAR)', style: TextStyle(color: _muted, fontSize: 12, fontWeight: FontWeight.w600)))),
+            if (isMobile)
+              _buildMobileItems()
+            else
+              _buildDesktopTable(),
+            const Divider(height: 1, color: Color(0xFFF0F0F0)),
+            SizedBox(height: isMobile ? 16 : 24),
+            // Totals
+            if (isMobile)
+              _buildTotals()
+            else
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  SizedBox(width: 320, child: _buildTotals()),
                 ],
               ),
-            ),
-            const Divider(height: 1, color: Color(0xFFF0F0F0)),
-            // Item Rows
-            ...invoice.items.asMap().entries.map((entry) {
-              final idx = entry.key + 1;
-              final item = entry.value;
-              return Padding(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                child: Row(
-                  children: [
-                    SizedBox(width: 40, child: Text('$idx', style: const TextStyle(color: _muted, fontSize: 14))),
-                    Expanded(flex: 3, child: Text(item.description, style: const TextStyle(fontWeight: FontWeight.w600, color: _ink, fontSize: 14))),
-                    Expanded(flex: 1, child: Text('${item.quantity.toInt()}', style: const TextStyle(color: _gold, fontWeight: FontWeight.w600, fontSize: 14))),
-                    Expanded(flex: 1, child: Text(item.unitPrice.toStringAsFixed(2), style: const TextStyle(color: _ink, fontSize: 14))),
-                    Expanded(flex: 1, child: Text(item.commission.toStringAsFixed(2), style: const TextStyle(color: _ink, fontSize: 14))),
-                    Expanded(flex: 1, child: Align(alignment: Alignment.centerRight, child: Text(item.total.toStringAsFixed(2), style: const TextStyle(fontWeight: FontWeight.w700, color: _ink, fontSize: 14)))),
-                  ],
-                ),
-              );
-            }).toList(),
-            const Divider(height: 1, color: Color(0xFFF0F0F0)),
-            const SizedBox(height: 24),
-            // Totals
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                SizedBox(
-                  width: 320,
-                  child: Column(
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Text('Subtotal', style: TextStyle(color: _muted, fontSize: 13)),
-                          Text('QAR ${invoice.subtotal.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.w600, color: _ink, fontSize: 14)),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Row(
-                            children: const [
-                              Text('Papay Charges', style: TextStyle(color: _gold, fontWeight: FontWeight.w600, fontSize: 13)),
-                              Text(' * required', style: TextStyle(color: _goldDark, fontSize: 11)),
-                            ],
-                          ),
-                          Text('QAR ${invoice.laborCharges.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.w600, color: _ink, fontSize: 14)),
-                        ],
-                      ),
-                      const SizedBox(height: 24),
-                      const Divider(height: 1, color: Color(0xFFF0F0F0)),
-                      const SizedBox(height: 24),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Text('TOTAL ONLY', style: TextStyle(fontWeight: FontWeight.w800, color: _ink, fontSize: 16)),
-                          Text('QR ${invoice.grandTotal.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.w800, color: _gold, fontSize: 18)),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
           ],
         ),
       ),
     );
   }
-}
 
+  // ---- Desktop: column table ----
+  Widget _buildDesktopTable() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Header Row
+        Padding(
+          padding: const EdgeInsets.only(bottom: 16),
+          child: Row(
+            children: const [
+              SizedBox(width: 40, child: Text('#', style: TextStyle(color: _muted, fontSize: 12, fontWeight: FontWeight.w600))),
+              Expanded(flex: 3, child: Text('Description', style: TextStyle(color: _muted, fontSize: 12, fontWeight: FontWeight.w600))),
+              Expanded(flex: 1, child: Text('Qty', style: TextStyle(color: _muted, fontSize: 12, fontWeight: FontWeight.w600))),
+              Expanded(flex: 1, child: Text('Unit Price', style: TextStyle(color: _muted, fontSize: 12, fontWeight: FontWeight.w600))),
+              Expanded(flex: 1, child: Text('Commission', style: TextStyle(color: _muted, fontSize: 12, fontWeight: FontWeight.w600))),
+              Expanded(flex: 1, child: Align(alignment: Alignment.centerRight, child: Text('Amount (QAR)', style: TextStyle(color: _muted, fontSize: 12, fontWeight: FontWeight.w600)))),
+            ],
+          ),
+        ),
+        const Divider(height: 1, color: Color(0xFFF0F0F0)),
+        // Item Rows
+        ...invoice.items.asMap().entries.map((entry) {
+          final idx = entry.key + 1;
+          final item = entry.value;
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            child: Row(
+              children: [
+                SizedBox(width: 40, child: Text('$idx', style: const TextStyle(color: _muted, fontSize: 14))),
+                Expanded(flex: 3, child: Text(item.description, style: const TextStyle(fontWeight: FontWeight.w600, color: _ink, fontSize: 14))),
+                Expanded(flex: 1, child: Text('${item.quantity.toInt()}', style: const TextStyle(color: _gold, fontWeight: FontWeight.w600, fontSize: 14))),
+                Expanded(flex: 1, child: Text(item.unitPrice.toStringAsFixed(2), style: const TextStyle(color: _ink, fontSize: 14))),
+                Expanded(flex: 1, child: Text(item.commission.toStringAsFixed(2), style: const TextStyle(color: _ink, fontSize: 14))),
+                Expanded(flex: 1, child: Align(alignment: Alignment.centerRight, child: Text(item.total.toStringAsFixed(2), style: const TextStyle(fontWeight: FontWeight.w700, color: _ink, fontSize: 14)))),
+              ],
+            ),
+          );
+        }).toList(),
+      ],
+    );
+  }
+
+  // ---- Mobile: stacked item cards ----
+  Widget _buildMobileItems() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: invoice.items.asMap().entries.map((entry) {
+        final idx = entry.key + 1;
+        final item = entry.value;
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SizedBox(width: 24, child: Text('$idx', style: const TextStyle(color: _muted, fontSize: 13))),
+                  Expanded(
+                    child: Text(
+                      item.description,
+                      style: const TextStyle(fontWeight: FontWeight.w600, color: _ink, fontSize: 14),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Padding(
+                padding: const EdgeInsets.only(left: 24),
+                child: Wrap(
+                  spacing: 16,
+                  runSpacing: 6,
+                  children: [
+                    _mobileStat('Qty', '${item.quantity.toInt()}', color: _gold),
+                    _mobileStat('Unit Price', item.unitPrice.toStringAsFixed(2)),
+                    _mobileStat('Commission', item.commission.toStringAsFixed(2)),
+                    _mobileStat('Amount', 'QAR ${item.total.toStringAsFixed(2)}', bold: true),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+              const Divider(height: 1, color: Color(0xFFF0F0F0)),
+            ],
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _mobileStat(String label, String value, {Color? color, bool bold = false}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: const TextStyle(color: _muted, fontSize: 11)),
+        const SizedBox(height: 2),
+        Text(
+          value,
+          style: TextStyle(
+            color: color ?? _ink,
+            fontSize: 13,
+            fontWeight: bold ? FontWeight.w700 : FontWeight.w500,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTotals() {
+    return Column(
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text('Subtotal', style: TextStyle(color: _muted, fontSize: 13)),
+            Text('QAR ${invoice.subtotal.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.w600, color: _ink, fontSize: 14)),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              children: const [
+                Text('Papay Charges', style: TextStyle(color: _gold, fontWeight: FontWeight.w600, fontSize: 13)),
+                Text(' * required', style: TextStyle(color: _goldDark, fontSize: 11)),
+              ],
+            ),
+            Text('QAR ${invoice.laborCharges.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.w600, color: _ink, fontSize: 14)),
+          ],
+        ),
+        const SizedBox(height: 24),
+        const Divider(height: 1, color: Color(0xFFF0F0F0)),
+        const SizedBox(height: 24),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text('TOTAL ONLY', style: TextStyle(fontWeight: FontWeight.w800, color: _ink, fontSize: 16)),
+            Text('QR ${invoice.grandTotal.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.w800, color: _gold, fontSize: 18)),
+          ],
+        ),
+      ],
+    );
+  }
+}

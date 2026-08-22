@@ -26,6 +26,9 @@ const _goldDark = Color(0xFF9A6E28); // darker text on tinted surfaces
 const _goldTint = Color(0xFFF3E2B8); // tab bar track background
 const _goldSoft = Color(0xFFFBF2DD); // soft fills: banners, add-row button, chips
 
+const _compactBreakpoint = 840.0;
+bool _isCompact(BuildContext context) => MediaQuery.sizeOf(context).width < _compactBreakpoint;
+
 // ─── Category Definitions ────────────────────────────────────────────────────
 // Every category now shares the same gold + goldTint pair instead of a unique
 // hue, so the whole screen reads as one consistent, on-brand tool.
@@ -294,8 +297,10 @@ class _GarageRecordsScreenState extends State<GarageRecordsScreen>
       context: context,
       builder: (ctx) => Dialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
         child: Container(
           width: 360,
+          constraints: BoxConstraints(maxWidth: MediaQuery.sizeOf(ctx).width - 40),
           padding: const EdgeInsets.all(28),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -354,7 +359,7 @@ class _GarageRecordsScreenState extends State<GarageRecordsScreen>
       content: Row(children: [
         Icon(success ? Icons.check_circle_rounded : Icons.error_rounded, color: Colors.white, size: 18),
         const SizedBox(width: 10),
-        Text(msg, style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: Colors.white)),
+        Expanded(child: Text(msg, style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: Colors.white))),
       ]),
       backgroundColor: success ? const Color(0xFF4A8F6A) : const Color(0xFFC24C4A),
       behavior: SnackBarBehavior.floating,
@@ -390,10 +395,12 @@ class _GarageRecordsScreenState extends State<GarageRecordsScreen>
 
   @override
   Widget build(BuildContext context) {
+    final compact = _isCompact(context);
     return Scaffold(
       backgroundColor: _bg,
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 44, vertical: 36),
+      body: SafeArea(
+        child: SingleChildScrollView(
+        padding: EdgeInsets.symmetric(horizontal: compact ? 16 : 44, vertical: compact ? 20 : 36),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -412,24 +419,27 @@ class _GarageRecordsScreenState extends State<GarageRecordsScreen>
           ],
         ),
       ),
+      ),
     );
   }
 
   Widget _buildHeader() {
+    final compact = _isCompact(context);
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _GlassButton(
           onTap: () => Navigator.pop(context),
           child: const Icon(Icons.arrow_back_rounded, size: 20, color: _ink),
         ),
-        const SizedBox(width: 18),
+        SizedBox(width: compact ? 12 : 18),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Garage Records', style: GoogleFonts.oswald(fontSize: 26, fontWeight: FontWeight.w600, color: _ink, letterSpacing: 0.2)),
+              Text('Garage Records', style: GoogleFonts.oswald(fontSize: compact ? 22 : 26, fontWeight: FontWeight.w600, color: _ink, letterSpacing: 0.2)),
               const SizedBox(height: 3),
-              Text('Track products, rent, salaries, utilities, profits & expenses', style: GoogleFonts.inter(fontSize: 13.5, color: _muted)),
+              Text('Track products, rent, salaries, utilities, profits & expenses', style: GoogleFonts.inter(fontSize: compact ? 12.5 : 13.5, color: _muted)),
             ],
           ),
         ),
@@ -438,57 +448,68 @@ class _GarageRecordsScreenState extends State<GarageRecordsScreen>
   }
 
   Widget _buildTabBar() {
+    final compact = _isCompact(context);
+    Widget tab(RecordCategory cat) {
+      final isActive = cat.id == _activeId;
+      final cColor   = Color(cat.color);
+      return GestureDetector(
+        onTap: () => _switchTab(cat.id),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeOut,
+          margin: const EdgeInsets.symmetric(horizontal: 3),
+          padding: EdgeInsets.symmetric(vertical: 11, horizontal: compact ? 10 : 0),
+          decoration: BoxDecoration(
+            color: isActive ? _card : Colors.transparent,
+            borderRadius: BorderRadius.circular(11),
+            boxShadow: isActive
+                ? [BoxShadow(color: cColor.withValues(alpha: 0.18), blurRadius: 12, offset: const Offset(0, 4))]
+                : [],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(_icon(cat.icon), size: 18, color: isActive ? cColor : _muted),
+              const SizedBox(height: 5),
+              Text(
+                cat.label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: GoogleFonts.oswald(
+                  fontSize: 11.5,
+                  fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
+                  letterSpacing: 0.3,
+                  color: isActive ? cColor : _muted,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     return Container(
       padding: const EdgeInsets.all(6),
       decoration: BoxDecoration(
         color: _goldTint,
         borderRadius: BorderRadius.circular(16),
       ),
-      child: Row(
-        children: _categories.map((cat) {
-          final isActive = cat.id == _activeId;
-          final cColor   = Color(cat.color);
-          return Expanded(
-            child: GestureDetector(
-              onTap: () => _switchTab(cat.id),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                curve: Curves.easeOut,
-                margin: const EdgeInsets.symmetric(horizontal: 3),
-                padding: const EdgeInsets.symmetric(vertical: 11),
-                decoration: BoxDecoration(
-                  color: isActive ? _card : Colors.transparent,
-                  borderRadius: BorderRadius.circular(11),
-                  boxShadow: isActive
-                      ? [BoxShadow(color: cColor.withOpacity(0.18), blurRadius: 12, offset: const Offset(0, 4))]
-                      : [],
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(_icon(cat.icon), size: 18, color: isActive ? cColor : _muted),
-                    const SizedBox(height: 5),
-                    Text(
-                      cat.label,
-                      style: GoogleFonts.oswald(
-                        fontSize: 11.5,
-                        fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
-                        letterSpacing: 0.3,
-                        color: isActive ? cColor : _muted,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
-                ),
+      child: compact
+          ? SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: _categories.map((cat) => SizedBox(width: 104, child: tab(cat))).toList(),
               ),
+            )
+          : Row(
+              children: _categories.map((cat) => Expanded(child: tab(cat))).toList(),
             ),
-          );
-        }).toList(),
-      ),
     );
   }
 
   Widget _buildMainCard() {
+    final pad = _isCompact(context) ? 16.0 : 24.0;
     return Container(
       decoration: BoxDecoration(
         color: _card,
@@ -500,21 +521,22 @@ class _GarageRecordsScreenState extends State<GarageRecordsScreen>
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           _buildSectionBanner('ADD NEW ${_cat.label.toUpperCase()}', _cCol, Icons.add_circle_outline_rounded),
-          Padding(padding: const EdgeInsets.fromLTRB(24, 0, 24, 24), child: _buildDraftSection()),
+          Padding(padding: EdgeInsets.fromLTRB(pad, 0, pad, pad), child: _buildDraftSection()),
           const Divider(height: 1, color: _border),
           _buildSectionBanner('SAVED ${_cat.label.toUpperCase()}', _cCol, Icons.history_rounded),
-          Padding(padding: const EdgeInsets.fromLTRB(24, 0, 24, 24), child: _buildSavedSection()),
+          Padding(padding: EdgeInsets.fromLTRB(pad, 0, pad, pad), child: _buildSavedSection()),
         ],
       ),
     );
   }
 
   Widget _buildSectionBanner(String title, Color color, IconData icon) {
+    final compact = _isCompact(context);
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+      padding: EdgeInsets.symmetric(horizontal: compact ? 16 : 24, vertical: 16),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.05),
-        border: Border(bottom: BorderSide(color: color.withOpacity(0.12))),
+        color: color.withValues(alpha: 0.05),
+        border: Border(bottom: BorderSide(color: color.withValues(alpha: 0.12))),
       ),
       child: Row(
         children: [
@@ -537,10 +559,12 @@ class _GarageRecordsScreenState extends State<GarageRecordsScreen>
       children: [
         const SizedBox(height: 20),
         if (needDate) ...[
-          Row(
+          Wrap(
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: 12,
+            runSpacing: 8,
             children: [
               Text('PERIOD', style: GoogleFonts.oswald(fontSize: 11, fontWeight: FontWeight.w500, letterSpacing: 1.0, color: _muted)),
-              const SizedBox(width: 12),
               _DateChip(
                 date: _draftDates[_activeId]!,
                 color: _cCol,
@@ -559,8 +583,10 @@ class _GarageRecordsScreenState extends State<GarageRecordsScreen>
           const SizedBox(height: 20),
         ],
 
-        _TableHeader(cat: cat),
-        const SizedBox(height: 4),
+        if (!_isCompact(context)) ...[
+          _TableHeader(cat: cat),
+          const SizedBox(height: 4),
+        ],
 
         ...rows.asMap().entries.map((e) => _DraftRow(
           key: ValueKey(e.value['id']),
@@ -573,25 +599,47 @@ class _GarageRecordsScreenState extends State<GarageRecordsScreen>
         )),
 
         const SizedBox(height: 12),
+        _buildDraftActions(cat, total),
+      ],
+    );
+  }
+
+  Widget _buildDraftActions(RecordCategory cat, double total) {
+    final compact = _isCompact(context);
+    final saving = context.select<RecordsState, bool>((s) => s.isLoading);
+    final saveBtn = saving
+        ? _SaveButton(color: _cCol, loading: true, onTap: null, label: 'Saving...', expand: compact)
+        : _SaveButton(color: _cCol, loading: false, onTap: _save, label: 'Save ${cat.label}', expand: compact);
+    final totalCol = Column(
+      crossAxisAlignment: compact ? CrossAxisAlignment.start : CrossAxisAlignment.end,
+      children: [
+        Text('BATCH TOTAL', style: GoogleFonts.oswald(fontSize: 10.5, fontWeight: FontWeight.w500, letterSpacing: 1.0, color: _muted)),
+        Text('QR ${total.toStringAsFixed(2)}', style: GoogleFonts.jetBrainsMono(fontSize: compact ? 18 : 20, fontWeight: FontWeight.w700, color: _cCol)),
+      ],
+    );
+
+    if (compact) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _AddRowButton(color: _cCol, softColor: _sCol, onTap: _addRow),
+          const SizedBox(height: 16),
+          totalCol,
+          const SizedBox(height: 12),
+          saveBtn,
+        ],
+      );
+    }
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        _AddRowButton(color: _cCol, softColor: _sCol, onTap: _addRow),
         Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            _AddRowButton(color: _cCol, softColor: _sCol, onTap: _addRow),
-            Row(
-              children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text('BATCH TOTAL', style: GoogleFonts.oswald(fontSize: 10.5, fontWeight: FontWeight.w500, letterSpacing: 1.0, color: _muted)),
-                    Text('QR ${total.toStringAsFixed(2)}', style: GoogleFonts.jetBrainsMono(fontSize: 20, fontWeight: FontWeight.w700, color: _cCol)),
-                  ],
-                ),
-                const SizedBox(width: 20),
-                context.select<RecordsState, bool>((s) => s.isLoading)
-                    ? _SaveButton(color: _cCol, loading: true,  onTap: null,  label: 'Saving...')
-                    : _SaveButton(color: _cCol, loading: false, onTap: _save, label: 'Save ${cat.label}'),
-              ],
-            ),
+            totalCol,
+            const SizedBox(width: 20),
+            saveBtn,
           ],
         ),
       ],
@@ -618,14 +666,15 @@ class _GarageRecordsScreenState extends State<GarageRecordsScreen>
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         const SizedBox(height: 20),
-        Row(
+        Wrap(
+          spacing: 12,
+          runSpacing: 10,
           children: [
             _FetchButton(
               color: _cCol,
               loading: st.isLoading,
               onTap: st.isLoading ? null : () => _fetchCurrent(st),
             ),
-            const SizedBox(width: 12),
             if (expanded) _HideButton(onTap: () => setState(() => _savedExpanded[_activeId] = false)),
           ],
         ),
@@ -660,27 +709,28 @@ class _GarageRecordsScreenState extends State<GarageRecordsScreen>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Column headers
-              Container(
-                color: const Color(0xFFF7F4EF),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
-                child: Row(
-                  children: [
-                    SizedBox(width: 36, child: Text('#', style: GoogleFonts.oswald(fontSize: 11, fontWeight: FontWeight.w600, color: _muted))),
-                    if (isProducts) ...[
-                      Expanded(flex: 20, child: Text('PRODUCT', style: GoogleFonts.oswald(fontSize: 11, fontWeight: FontWeight.w600, color: _muted))),
-                      SizedBox(width: 80, child: Text('QTY', textAlign: TextAlign.center, style: GoogleFonts.oswald(fontSize: 11, fontWeight: FontWeight.w600, color: _muted))),
-                      SizedBox(width: 100, child: Text('UNIT PRICE', textAlign: TextAlign.right, style: GoogleFonts.oswald(fontSize: 11, fontWeight: FontWeight.w600, color: _muted))),
-                      SizedBox(width: 100, child: Text('TOTAL', textAlign: TextAlign.right, style: GoogleFonts.oswald(fontSize: 11, fontWeight: FontWeight.w600, color: _muted))),
-                    ] else ...[
-                      Expanded(child: Text('NAME / INFO', style: GoogleFonts.oswald(fontSize: 11, fontWeight: FontWeight.w600, color: _muted))),
-                      SizedBox(width: 110, child: Text('AMOUNT', textAlign: TextAlign.right, style: GoogleFonts.oswald(fontSize: 11, fontWeight: FontWeight.w600, color: _muted))),
+              if (!_isCompact(context)) ...[
+                Container(
+                  color: const Color(0xFFF7F4EF),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
+                  child: Row(
+                    children: [
+                      SizedBox(width: 36, child: Text('#', style: GoogleFonts.oswald(fontSize: 11, fontWeight: FontWeight.w600, color: _muted))),
+                      if (isProducts) ...[
+                        Expanded(flex: 20, child: Text('PRODUCT', style: GoogleFonts.oswald(fontSize: 11, fontWeight: FontWeight.w600, color: _muted))),
+                        SizedBox(width: 80, child: Text('QTY', textAlign: TextAlign.center, style: GoogleFonts.oswald(fontSize: 11, fontWeight: FontWeight.w600, color: _muted))),
+                        SizedBox(width: 100, child: Text('UNIT PRICE', textAlign: TextAlign.right, style: GoogleFonts.oswald(fontSize: 11, fontWeight: FontWeight.w600, color: _muted))),
+                        SizedBox(width: 100, child: Text('TOTAL', textAlign: TextAlign.right, style: GoogleFonts.oswald(fontSize: 11, fontWeight: FontWeight.w600, color: _muted))),
+                      ] else ...[
+                        Expanded(child: Text('NAME / INFO', style: GoogleFonts.oswald(fontSize: 11, fontWeight: FontWeight.w600, color: _muted))),
+                        SizedBox(width: 110, child: Text('AMOUNT', textAlign: TextAlign.right, style: GoogleFonts.oswald(fontSize: 11, fontWeight: FontWeight.w600, color: _muted))),
+                      ],
+                      const SizedBox(width: 36),
                     ],
-                    const SizedBox(width: 36),
-                  ],
+                  ),
                 ),
-              ),
-              const Divider(height: 1, color: _border),
+                const Divider(height: 1, color: _border),
+              ],
               ...list.asMap().entries.map((e) => _SavedRow(
                 idx: e.key,
                 item: e.value as Map<String, dynamic>,
@@ -766,8 +816,8 @@ class _DateChip extends StatelessWidget {
     child: Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.08),
-        border: Border.all(color: color.withOpacity(0.3), width: 1.5),
+        color: color.withValues(alpha: 0.08),
+        border: Border.all(color: color.withValues(alpha: 0.3), width: 1.5),
         borderRadius: BorderRadius.circular(10),
       ),
       child: Row(
@@ -777,7 +827,7 @@ class _DateChip extends StatelessWidget {
           const SizedBox(width: 8),
           Text(DateFormat('MMMM yyyy').format(date), style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w700, color: color)),
           const SizedBox(width: 8),
-          Icon(Icons.keyboard_arrow_down_rounded, size: 16, color: color.withOpacity(0.7)),
+          Icon(Icons.keyboard_arrow_down_rounded, size: 16, color: color.withValues(alpha: 0.7)),
         ],
       ),
     ),
@@ -818,6 +868,55 @@ class _DraftRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final total = _rowTotal(cat, row);
+    if (_isCompact(context)) {
+      return Container(
+        margin: const EdgeInsets.only(top: 10),
+        padding: const EdgeInsets.fromLTRB(14, 12, 10, 14),
+        decoration: BoxDecoration(
+          color: _inputBg,
+          border: Border.all(color: _border, width: 1),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                Text('${idx + 1}', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w700, color: _muted)),
+                const Spacer(),
+                IconButton(
+                  icon: const Icon(Icons.remove_circle_outline_rounded, size: 20),
+                  color: const Color(0xFFCC5A5A),
+                  onPressed: onRemove,
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                  splashRadius: 18,
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            ...cat.columns.map((c) => Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(c.label.toUpperCase(), style: GoogleFonts.oswald(fontSize: 10.5, fontWeight: FontWeight.w600, letterSpacing: 0.8, color: _muted)),
+                  const SizedBox(height: 6),
+                  _buildField(c),
+                ],
+              ),
+            )),
+            Align(
+              alignment: Alignment.centerRight,
+              child: Text(
+                total > 0 ? 'QR ${total.toStringAsFixed(2)}' : '—',
+                style: GoogleFonts.jetBrainsMono(fontSize: 15, fontWeight: FontWeight.w700, color: total > 0 ? accentColor : _muted),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
     return Container(
       margin: const EdgeInsets.only(top: 6),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -917,13 +1016,17 @@ class _AddRowButton extends StatelessWidget {
     onTap: onTap,
     borderRadius: BorderRadius.circular(10),
     child: Container(
+      width: _isCompact(context) ? double.infinity : null,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       decoration: BoxDecoration(
         color: softColor,
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: color.withOpacity(0.25), width: 1.5),
+        border: Border.all(color: color.withValues(alpha: 0.25), width: 1.5),
       ),
-      child: Row(mainAxisSize: MainAxisSize.min, children: [
+      child: Row(
+        mainAxisSize: _isCompact(context) ? MainAxisSize.max : MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
         Icon(Icons.add_rounded, size: 17, color: color),
         const SizedBox(width: 6),
         Text('Add row', style: GoogleFonts.inter(fontSize: 13.5, fontWeight: FontWeight.w700, color: color)),
@@ -937,18 +1040,24 @@ class _SaveButton extends StatelessWidget {
   final bool loading;
   final VoidCallback? onTap;
   final String label;
-  const _SaveButton({required this.color, required this.loading, required this.onTap, required this.label});
+  final bool expand;
+  const _SaveButton({required this.color, required this.loading, required this.onTap, required this.label, this.expand = false});
 
   @override
-  Widget build(BuildContext context) => Material(
-    color: onTap == null ? color.withOpacity(0.5) : color,
+  Widget build(BuildContext context) => SizedBox(
+    width: expand ? double.infinity : null,
+    child: Material(
+    color: onTap == null ? color.withValues(alpha: 0.5) : color,
     borderRadius: BorderRadius.circular(12),
     child: InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 13),
-        child: Row(mainAxisSize: MainAxisSize.min, children: [
+        child: Row(
+          mainAxisSize: expand ? MainAxisSize.max : MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
           if (loading)
             const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
           else
@@ -958,6 +1067,7 @@ class _SaveButton extends StatelessWidget {
         ]),
       ),
     ),
+  ),
   );
 }
 
@@ -969,7 +1079,7 @@ class _FetchButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Material(
-    color: onTap == null ? color.withOpacity(0.5) : color,
+    color: onTap == null ? color.withValues(alpha: 0.5) : color,
     borderRadius: BorderRadius.circular(10),
     child: InkWell(
       onTap: onTap,
@@ -1018,7 +1128,7 @@ class _EmptyState extends StatelessWidget {
     padding: const EdgeInsets.symmetric(vertical: 40),
     decoration: BoxDecoration(border: Border.all(color: _border), borderRadius: BorderRadius.circular(14)),
     child: Column(children: [
-      Icon(Icons.inbox_rounded, size: 36, color: color.withOpacity(0.3)),
+      Icon(Icons.inbox_rounded, size: 36, color: color.withValues(alpha: 0.3)),
       const SizedBox(height: 10),
       Text('No records found', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: _muted)),
       const SizedBox(height: 4),
@@ -1081,67 +1191,107 @@ class _SavedRowState extends State<_SavedRow> {
       onExit:  (_) => setState(() => _hovered = false),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 130),
-        color: _hovered ? color.withOpacity(0.04) : Colors.transparent,
+        color: _hovered ? color.withValues(alpha: 0.04) : Colors.transparent,
         child: Column(
           children: [
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  SizedBox(width: 36, child: Text('${widget.idx + 1}', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: _muted))),
-                  if (widget.isProducts) ...[
-                    Expanded(flex: 20, child: Text(_title, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: _ink))),
-                    SizedBox(width: 80, child: Text('${i['quantity'] ?? '—'}', textAlign: TextAlign.center, style: GoogleFonts.jetBrainsMono(fontSize: 14, color: _muted, fontWeight: FontWeight.w500))),
-                    SizedBox(width: 100, child: Text('QR ${i['unit_price'] ?? '—'}', textAlign: TextAlign.right, style: GoogleFonts.jetBrainsMono(fontSize: 14, color: _muted, fontWeight: FontWeight.w500))),
-                    SizedBox(width: 100, child: Builder(builder: (_) {
-                      final qty   = double.tryParse(i['quantity']?.toString()   ?? '0') ?? 0;
-                      final price = double.tryParse(i['unit_price']?.toString() ?? '0') ?? 0;
-                      return Text('QR ${(qty * price).toStringAsFixed(2)}', textAlign: TextAlign.right, style: GoogleFonts.jetBrainsMono(fontSize: 14, fontWeight: FontWeight.w700, color: color));
-                    })),
-                  ] else ...[
-                    Expanded(child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(_title, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: _ink)),
-                        if (_subtitle.isNotEmpty) ...[
-                          const SizedBox(height: 2),
-                          Text(_subtitle, style: GoogleFonts.jetBrainsMono(fontSize: 12, color: _muted)),
-                        ],
-                      ],
-                    )),
-                    SizedBox(
-                      width: 110,
-                      child: Text(
-                        'QR ${double.tryParse(i['amount']?.toString() ?? '0')?.toStringAsFixed(2) ?? '—'}',
-                        textAlign: TextAlign.right,
-                        style: GoogleFonts.jetBrainsMono(fontSize: 14.5, fontWeight: FontWeight.w700, color: color),
-                      ),
-                    ),
-                  ],
-                  const SizedBox(width: 4),
-                  SizedBox(
-                    width: 32,
-                    child: AnimatedOpacity(
-                      opacity: _hovered ? 1.0 : 0.4,
-                      duration: const Duration(milliseconds: 130),
-                      child: IconButton(
-                        icon: const Icon(Icons.delete_outline_rounded, size: 17),
-                        color: const Color(0xFFCC5A5A),
-                        onPressed: widget.onDelete,
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(),
-                        splashRadius: 18,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+              child: _isCompact(context) ? _buildCompactBody(i, color) : _buildWideBody(i, color),
             ),
             if (!widget.isLast) const Divider(height: 1, color: _border),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _deleteButton({required double opacity}) {
+    return AnimatedOpacity(
+      opacity: opacity,
+      duration: const Duration(milliseconds: 130),
+      child: IconButton(
+        icon: const Icon(Icons.delete_outline_rounded, size: 17),
+        color: const Color(0xFFCC5A5A),
+        onPressed: widget.onDelete,
+        padding: EdgeInsets.zero,
+        constraints: const BoxConstraints(),
+        splashRadius: 18,
+      ),
+    );
+  }
+
+  Widget _buildCompactBody(Map<String, dynamic> i, Color color) {
+    String amountText;
+    String? extra;
+    if (widget.isProducts) {
+      extra = 'Qty ${i['quantity'] ?? '—'}  ·  QR ${i['unit_price'] ?? '—'}';
+      final qty   = double.tryParse(i['quantity']?.toString()   ?? '0') ?? 0;
+      final price = double.tryParse(i['unit_price']?.toString() ?? '0') ?? 0;
+      amountText = 'QR ${(qty * price).toStringAsFixed(2)}';
+    } else {
+      extra = _subtitle.isNotEmpty ? _subtitle : null;
+      amountText = 'QR ${double.tryParse(i['amount']?.toString() ?? '0')?.toStringAsFixed(2) ?? '—'}';
+    }
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('${widget.idx + 1}.  $_title', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: _ink)),
+              if (extra != null && extra.isNotEmpty) ...[
+                const SizedBox(height: 4),
+                Text(extra, style: GoogleFonts.jetBrainsMono(fontSize: 12, color: _muted)),
+              ],
+              const SizedBox(height: 6),
+              Text(amountText, style: GoogleFonts.jetBrainsMono(fontSize: 14.5, fontWeight: FontWeight.w700, color: color)),
+            ],
+          ),
+        ),
+        _deleteButton(opacity: 1),
+      ],
+    );
+  }
+
+  Widget _buildWideBody(Map<String, dynamic> i, Color color) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        SizedBox(width: 36, child: Text('${widget.idx + 1}', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: _muted))),
+        if (widget.isProducts) ...[
+          Expanded(flex: 20, child: Text(_title, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: _ink))),
+          SizedBox(width: 80, child: Text('${i['quantity'] ?? '—'}', textAlign: TextAlign.center, style: GoogleFonts.jetBrainsMono(fontSize: 14, color: _muted, fontWeight: FontWeight.w500))),
+          SizedBox(width: 100, child: Text('QR ${i['unit_price'] ?? '—'}', textAlign: TextAlign.right, style: GoogleFonts.jetBrainsMono(fontSize: 14, color: _muted, fontWeight: FontWeight.w500))),
+          SizedBox(width: 100, child: Builder(builder: (_) {
+            final qty   = double.tryParse(i['quantity']?.toString()   ?? '0') ?? 0;
+            final price = double.tryParse(i['unit_price']?.toString() ?? '0') ?? 0;
+            return Text('QR ${(qty * price).toStringAsFixed(2)}', textAlign: TextAlign.right, style: GoogleFonts.jetBrainsMono(fontSize: 14, fontWeight: FontWeight.w700, color: color));
+          })),
+        ] else ...[
+          Expanded(child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(_title, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: _ink)),
+              if (_subtitle.isNotEmpty) ...[
+                const SizedBox(height: 2),
+                Text(_subtitle, style: GoogleFonts.jetBrainsMono(fontSize: 12, color: _muted)),
+              ],
+            ],
+          )),
+          SizedBox(
+            width: 110,
+            child: Text(
+              'QR ${double.tryParse(i['amount']?.toString() ?? '0')?.toStringAsFixed(2) ?? '—'}',
+              textAlign: TextAlign.right,
+              style: GoogleFonts.jetBrainsMono(fontSize: 14.5, fontWeight: FontWeight.w700, color: color),
+            ),
+          ),
+        ],
+        const SizedBox(width: 4),
+        SizedBox(width: 32, child: _deleteButton(opacity: _hovered ? 1.0 : 0.4)),
+      ],
     );
   }
 }

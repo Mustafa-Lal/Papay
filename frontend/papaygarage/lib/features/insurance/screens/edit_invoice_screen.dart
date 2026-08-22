@@ -19,6 +19,13 @@ const _inputBg = Color(0xFFFCFBF8);
 const _placeholder = Color(0xFFC4BDB1);
 
 // ──────────────────────────────────────────────
+// Responsive tokens
+// ──────────────────────────────────────────────
+const double _mobileBreakpoint = 700.0;
+const double _maxContentWidth = 960.0;
+const double _itemsTableMinWidth = 700.0;
+
+// ──────────────────────────────────────────────
 // Item row model
 // ──────────────────────────────────────────────
 class _ItemRow {
@@ -214,6 +221,8 @@ class _EditInvoiceScreenState extends State<EditInvoiceScreen> {
   @override
   Widget build(BuildContext context) {
     final isLoading = context.select((InsuranceState s) => s.isLoading);
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = screenWidth < _mobileBreakpoint;
 
     return Scaffold(
       backgroundColor: _bg,
@@ -222,34 +231,47 @@ class _EditInvoiceScreenState extends State<EditInvoiceScreen> {
           key: _formKey,
           child: Column(
             children: [
-              _TopBar(isLoading: isLoading, onSave: _submit),
+              _TopBar(isLoading: isLoading, onSave: _submit, isMobile: isMobile),
               Expanded(
                 child: SingleChildScrollView(
-                  padding: const EdgeInsets.fromLTRB(24, 20, 24, 40),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      _SectionCard(
-                        icon: Icons.person_outline_rounded,
-                        title: 'Customer Details',
-                        child: _buildCustomerFields(),
+                  padding: EdgeInsets.fromLTRB(
+                    isMobile ? 16 : 24,
+                    isMobile ? 16 : 20,
+                    isMobile ? 16 : 24,
+                    isMobile ? 28 : 40,
+                  ),
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: _maxContentWidth),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          _SectionCard(
+                            icon: Icons.person_outline_rounded,
+                            title: 'Customer Details',
+                            isMobile: isMobile,
+                            child: _buildCustomerFields(isMobile),
+                          ),
+                          const SizedBox(height: 20),
+                          _SectionCard(
+                            icon: Icons.receipt_long_outlined,
+                            title: 'Invoice Details',
+                            isMobile: isMobile,
+                            child: _buildInvoiceFields(isMobile),
+                          ),
+                          const SizedBox(height: 20),
+                          _SectionCard(
+                            icon: Icons.build_outlined,
+                            title: 'Items',
+                            isMobile: isMobile,
+                            trailing: _AddItemButton(
+                              onTap: () => setState(() => _items.add(_ItemRow())),
+                            ),
+                            child: _buildItemsTable(isMobile),
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 20),
-                      _SectionCard(
-                        icon: Icons.receipt_long_outlined,
-                        title: 'Invoice Details',
-                        child: _buildInvoiceFields(),
-                      ),
-                      const SizedBox(height: 20),
-                      _SectionCard(
-                        icon: Icons.build_outlined,
-                        title: 'Items',
-                        trailing: _AddItemButton(
-                          onTap: () => setState(() => _items.add(_ItemRow())),
-                        ),
-                        child: _buildItemsTable(),
-                      ),
-                    ],
+                    ),
                   ),
                 ),
               ),
@@ -262,7 +284,50 @@ class _EditInvoiceScreenState extends State<EditInvoiceScreen> {
 
   // ── Customer fields ───────────────────────────────────────────────────────
 
-  Widget _buildCustomerFields() {
+  Widget _buildCustomerFields(bool isMobile) {
+    final phoneField = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const _FieldLabel(label: 'Phone Number', hint: '(optional)'),
+        const SizedBox(height: 6),
+        _GoldInput(
+          controller: _phoneController,
+          hint: '3XXXXXXX',
+          prefixIcon: Icons.phone_outlined,
+          keyboardType: TextInputType.phone,
+          validator: (v) {
+            if (v != null && v.trim().isNotEmpty) {
+              if (v.trim().length != 8 || int.tryParse(v.trim()) == null) {
+                return '8 digits';
+              }
+            }
+            return null;
+          },
+        ),
+      ],
+    );
+
+    final qidField = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const _FieldLabel(label: 'QID', hint: '(optional)'),
+        const SizedBox(height: 6),
+        _GoldInput(
+          controller: _qidController,
+          hint: '28XXXXXXXXXX',
+          prefixIcon: Icons.credit_card_outlined,
+          validator: (v) {
+            if (v != null && v.trim().isNotEmpty) {
+              if (v.trim().length != 11 || int.tryParse(v.trim()) == null) {
+                return '11 digits';
+              }
+            }
+            return null;
+          },
+        ),
+      ],
+    );
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -273,126 +338,105 @@ class _EditInvoiceScreenState extends State<EditInvoiceScreen> {
           hint: 'e.g. Mustafa Al-Sayed',
         ),
         const SizedBox(height: 18),
-        Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const _FieldLabel(label: 'Phone Number', hint: '(optional)'),
-                  const SizedBox(height: 6),
-                  _GoldInput(
-                    controller: _phoneController,
-                    hint: '3XXXXXXX',
-                    prefixIcon: Icons.phone_outlined,
-                    keyboardType: TextInputType.phone,
-                    validator: (v) {
-                      if (v != null && v.trim().isNotEmpty) {
-                        if (v.trim().length != 8 || int.tryParse(v.trim()) == null) {
-                          return '8 digits';
-                        }
-                      }
-                      return null;
-                    },
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const _FieldLabel(label: 'QID', hint: '(optional)'),
-                  const SizedBox(height: 6),
-                  _GoldInput(
-                    controller: _qidController,
-                    hint: '28XXXXXXXXXX',
-                    prefixIcon: Icons.credit_card_outlined,
-                    validator: (v) {
-                      if (v != null && v.trim().isNotEmpty) {
-                        if (v.trim().length != 11 || int.tryParse(v.trim()) == null) {
-                          return '11 digits';
-                        }
-                      }
-                      return null;
-                    },
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
+        if (isMobile)
+          Column(
+            children: [
+              phoneField,
+              const SizedBox(height: 18),
+              qidField,
+            ],
+          )
+        else
+          Row(
+            children: [
+              Expanded(child: phoneField),
+              const SizedBox(width: 16),
+              Expanded(child: qidField),
+            ],
+          ),
       ],
     );
   }
 
   // ── Invoice fields ────────────────────────────────────────────────────────
 
-  Widget _buildInvoiceFields() {
+  Widget _buildInvoiceFields(bool isMobile) {
+    final plateField = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const _FieldLabel(label: 'Plate Number', required: true),
+        const SizedBox(height: 6),
+        _GoldInput(
+          controller: _plateController,
+          hint: 'e.g. 771775',
+          validator: (v) {
+            if (v == null || v.trim().isEmpty) return 'Required';
+            if (v.trim().length > 6 || int.tryParse(v.trim()) == null) return '1-6 digits';
+            return null;
+          },
+        ),
+      ],
+    );
+
+    final laborField = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const _FieldLabel(label: 'Labor Charges'),
+        const SizedBox(height: 6),
+        _GoldInput(
+          controller: _laborController,
+          hint: 'QAR 0.00',
+          keyboardType:
+              const TextInputType.numberWithOptions(decimal: true),
+          inputFormatters: [
+            FilteringTextInputFormatter.allow(RegExp(r'[\d.]')),
+          ],
+          onChanged: (_) => setState(() {}),
+        ),
+      ],
+    );
+
+    final statusField = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const _FieldLabel(label: 'Payment Status'),
+        const SizedBox(height: 6),
+        _StatusDropdown(
+          value: _paymentStatus,
+          onChanged: (v) => setState(() => _paymentStatus = v!),
+        ),
+      ],
+    );
+
+    if (isMobile) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          plateField,
+          const SizedBox(height: 18),
+          laborField,
+          const SizedBox(height: 18),
+          statusField,
+        ],
+      );
+    }
+
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const _FieldLabel(label: 'Plate Number', required: true),
-              const SizedBox(height: 6),
-              _GoldInput(
-                controller: _plateController,
-                hint: 'e.g. 771775',
-                validator: (v) {
-                  if (v == null || v.trim().isEmpty) return 'Required';
-                  if (v.trim().length > 6 || int.tryParse(v.trim()) == null) return '1-6 digits';
-                  return null;
-                },
-              ),
-            ],
-          ),
-        ),
+        Expanded(child: plateField),
         const SizedBox(width: 16),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const _FieldLabel(label: 'Labor Charges'),
-              const SizedBox(height: 6),
-              _GoldInput(
-                controller: _laborController,
-                hint: 'QAR 0.00',
-                keyboardType:
-                    const TextInputType.numberWithOptions(decimal: true),
-                inputFormatters: [
-                  FilteringTextInputFormatter.allow(RegExp(r'[\d.]')),
-                ],
-                onChanged: (_) => setState(() {}),
-              ),
-            ],
-          ),
-        ),
+        Expanded(child: laborField),
         const SizedBox(width: 16),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const _FieldLabel(label: 'Payment Status'),
-              const SizedBox(height: 6),
-              _StatusDropdown(
-                value: _paymentStatus,
-                onChanged: (v) => setState(() => _paymentStatus = v!),
-              ),
-            ],
-          ),
-        ),
+        Expanded(child: statusField),
       ],
     );
   }
 
   // ── Items table ───────────────────────────────────────────────────────────
 
-  Widget _buildItemsTable() {
-    return Column(
+  Widget _buildItemsTable(bool isMobile) {
+    final tableBody = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Padding(
@@ -432,48 +476,70 @@ class _EditInvoiceScreenState extends State<EditInvoiceScreen> {
             onChanged: () => setState(() {}),
           );
         }),
+      ],
+    );
+
+    // On narrow screens the fixed-width columns won't fit — let the table
+    // scroll horizontally instead of squeezing/breaking the inputs.
+    final scrollableTable = isMobile
+        ? SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: SizedBox(width: _itemsTableMinWidth, child: tableBody),
+          )
+        : tableBody;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        scrollableTable,
         const SizedBox(height: 16),
         const Divider(color: _border, height: 1, thickness: 1),
         const SizedBox(height: 20),
         Align(
           alignment: Alignment.centerRight,
-          child: SizedBox(
-            width: 280,
-            child: Column(
-              children: [
-                _TotalRow(label: 'Subtotal', value: _subtotal),
-                const SizedBox(height: 10),
-                _TotalRow(label: 'Labor Charges', value: _labor),
-                const SizedBox(height: 12),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  decoration: BoxDecoration(
-                    color: _goldSoft,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text(
-                        'Total',
-                        style: TextStyle(
-                            fontSize: 14.5,
-                            fontWeight: FontWeight.w800,
-                            color: _ink),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final totalsWidth =
+                  constraints.maxWidth < 280 ? constraints.maxWidth : 280.0;
+              return SizedBox(
+                width: totalsWidth,
+                child: Column(
+                  children: [
+                    _TotalRow(label: 'Subtotal', value: _subtotal),
+                    const SizedBox(height: 10),
+                    _TotalRow(label: 'Labor Charges', value: _labor),
+                    const SizedBox(height: 12),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: _goldSoft,
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                      Text(
-                        'QAR ${_total.toStringAsFixed(2)}',
-                        style: const TextStyle(
-                            fontSize: 19,
-                            fontWeight: FontWeight.w800,
-                            color: _goldDark),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            'Total',
+                            style: TextStyle(
+                                fontSize: 14.5,
+                                fontWeight: FontWeight.w800,
+                                color: _ink),
+                          ),
+                          Text(
+                            'QAR ${_total.toStringAsFixed(2)}',
+                            style: const TextStyle(
+                                fontSize: 19,
+                                fontWeight: FontWeight.w800,
+                                color: _goldDark),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              );
+            },
           ),
         ),
       ],
@@ -488,74 +554,105 @@ class _EditInvoiceScreenState extends State<EditInvoiceScreen> {
 class _TopBar extends StatelessWidget {
   final bool isLoading;
   final VoidCallback onSave;
-  const _TopBar({required this.isLoading, required this.onSave});
+  final bool isMobile;
+  const _TopBar({required this.isLoading, required this.onSave, required this.isMobile});
 
   @override
   Widget build(BuildContext context) {
+    final backButton = OutlinedButton(
+      onPressed: () => Navigator.pop(context),
+      style: OutlinedButton.styleFrom(
+        padding: EdgeInsets.all(isMobile ? 14 : 20),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        side: const BorderSide(color: _border, width: 1.5),
+        backgroundColor: _cardBg,
+        foregroundColor: _ink,
+      ),
+      child: const Icon(Icons.arrow_back, size: 20, color: _ink),
+    );
+
+    final titleColumn = Expanded(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Edit Insurance Invoice',
+            style: TextStyle(
+              fontSize: isMobile ? 19 : 24,
+              fontWeight: FontWeight.w800,
+              color: _ink,
+              letterSpacing: -0.5,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Update the details of the invoice below',
+            style: const TextStyle(fontSize: 14.5, color: _muted),
+            maxLines: isMobile ? 2 : 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ),
+    );
+
+    final saveButton = ElevatedButton.icon(
+      onPressed: isLoading ? null : onSave,
+      icon: isLoading
+          ? const SizedBox(
+              width: 16, height: 16,
+              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+            )
+          : const Icon(Icons.save_outlined, size: 18),
+      label: const Text('Update Invoice'),
+      style: ElevatedButton.styleFrom(
+        foregroundColor: Colors.white,
+        backgroundColor: _gold,
+        disabledBackgroundColor: _gold.withValues(alpha: 0.5),
+        disabledForegroundColor: Colors.white,
+        elevation: 0,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        padding: EdgeInsets.symmetric(
+            horizontal: 24, vertical: isMobile ? 16 : 20),
+        textStyle: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w700),
+      ).copyWith(
+        backgroundColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.disabled)) return _gold.withValues(alpha: 0.5);
+          if (states.contains(WidgetState.hovered)) return _goldDark;
+          return _gold;
+        }),
+      ),
+    );
+
+    if (isMobile) {
+      return Container(
+        color: _bg,
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                backButton,
+                const SizedBox(width: 14),
+                titleColumn,
+              ],
+            ),
+            const SizedBox(height: 16),
+            SizedBox(width: double.infinity, child: saveButton),
+          ],
+        ),
+      );
+    }
+
     return Container(
       color: _bg,
       padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 24),
       child: Row(
         children: [
-          OutlinedButton(
-            onPressed: () => Navigator.pop(context),
-            style: OutlinedButton.styleFrom(
-              padding: const EdgeInsets.all(20),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              side: const BorderSide(color: _border, width: 1.5),
-              backgroundColor: _cardBg,
-              foregroundColor: _ink,
-            ),
-            child: const Icon(Icons.arrow_back, size: 20, color: _ink),
-          ),
+          backButton,
           const SizedBox(width: 20),
-          const Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Edit Insurance Invoice',
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.w800,
-                    color: _ink,
-                    letterSpacing: -0.5,
-                  ),
-                ),
-                SizedBox(height: 4),
-                Text(
-                  'Update the details of the invoice below',
-                  style: TextStyle(fontSize: 14.5, color: _muted),
-                ),
-              ],
-            ),
-          ),
-          ElevatedButton.icon(
-            onPressed: isLoading ? null : onSave,
-            icon: isLoading
-                ? const SizedBox(
-                    width: 16, height: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                  )
-                : const Icon(Icons.save_outlined, size: 18),
-            label: const Text('Update Invoice'),
-            style: ElevatedButton.styleFrom(
-              foregroundColor: Colors.white,
-              backgroundColor: _gold,
-              disabledBackgroundColor: _gold.withOpacity(0.5),
-              disabledForegroundColor: Colors.white,
-              elevation: 0,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-              textStyle: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w700),
-            ).copyWith(
-              backgroundColor: WidgetStateProperty.resolveWith((states) {
-                if (states.contains(WidgetState.disabled)) return _gold.withOpacity(0.5);
-                if (states.contains(WidgetState.hovered)) return _goldDark;
-                return _gold;
-              }),
-            ),
-          ),
+          titleColumn,
+          saveButton,
         ],
       ),
     );
@@ -567,16 +664,25 @@ class _SectionCard extends StatelessWidget {
   final String title;
   final Widget child;
   final Widget? trailing;
+  final bool isMobile;
 
   const _SectionCard({
     required this.icon,
     required this.title,
     required this.child,
+    required this.isMobile,
     this.trailing,
   });
 
   @override
   Widget build(BuildContext context) {
+    final headerPadding = isMobile
+        ? const EdgeInsets.fromLTRB(16, 18, 16, 16)
+        : const EdgeInsets.fromLTRB(28, 24, 28, 20);
+    final bodyPadding = isMobile
+        ? const EdgeInsets.all(16)
+        : const EdgeInsets.all(24);
+
     return Container(
       decoration: BoxDecoration(
         color: _cardBg,
@@ -593,7 +699,7 @@ class _SectionCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(28, 24, 28, 20),
+            padding: headerPadding,
             child: Row(
               children: [
                 Container(
@@ -606,22 +712,23 @@ class _SectionCard extends StatelessWidget {
                   child: Icon(icon, size: 20, color: _goldDark),
                 ),
                 const SizedBox(width: 14),
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.w800,
-                    color: _ink,
-                    letterSpacing: -0.15,
+                Expanded(
+                  child: Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: isMobile ? 15.5 : 17,
+                      fontWeight: FontWeight.w800,
+                      color: _ink,
+                      letterSpacing: -0.15,
+                    ),
                   ),
                 ),
-                const Spacer(),
                 if (trailing != null) trailing!,
               ],
             ),
           ),
           const Divider(color: _border, height: 1, thickness: 1),
-          Padding(padding: const EdgeInsets.all(24), child: child),
+          Padding(padding: bodyPadding, child: child),
         ],
       ),
     );

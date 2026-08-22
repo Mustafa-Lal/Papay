@@ -29,7 +29,7 @@ _IMAGE_DIRS: list[Path] = [
 
 # ─── Cache (per-process, refreshed every 60 s) ───────────────────────────────
 
-CACHE_TTL = 60  # seconds
+CACHE_TTL = 86_400  # 24 hours — fine for a small team of 11–20 users
 
 _db_cache: dict = {"size": 0, "ts": 0.0}
 _img_cache: dict = {"size": 0, "ts": 0.0}

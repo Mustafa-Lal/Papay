@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../../../core/auth/auth_state.dart';
 import '../models/mechanic_models.dart';
-import '../providers/mechanic_state.dart';
 import 'create_mechanic_invoice_screen.dart';
 import 'mechanic_invoice_detail_screen.dart';
 import 'garage_records_screen.dart';
@@ -35,6 +34,9 @@ const _paidBg = Color(0xFFE7F5EC);
 
 const double _radius = 10;
 const double _cardPadding = 24;
+const double _compactBreakpoint = 840.0;
+
+bool _isCompact(BuildContext context) => MediaQuery.sizeOf(context).width < _compactBreakpoint;
 
 // Approximates the mockup's Oswald (headings) / JetBrains Mono
 // (plates, dates, amounts) look.
@@ -131,40 +133,46 @@ class _MechanicDashboardScreenState extends State<MechanicDashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final compact = _isCompact(context);
+    final pad = compact ? 16.0 : 24.0;
+    final vPad = compact ? 16.0 : 32.0;
+    final headerPad = compact ? 16.0 : _cardPadding;
     return Scaffold(
       backgroundColor: _bg,
-      body: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-        child: Column(
-          children: [
-            _buildTopbar(),
-            const SizedBox(height: 14),
-            const SizedBox(height: 14),
-            Expanded(
-              child: Container(
-                decoration: BoxDecoration(
-                  color: _surface,
-                  borderRadius: BorderRadius.circular(_radius),
-                  boxShadow: const [
-                    BoxShadow(color: Color(0x0A1C1B1A), blurRadius: 4, offset: Offset(0, 1)),
-                    BoxShadow(color: Color(0x1A1C1B1A), blurRadius: 24, offset: Offset(0, 8)),
-                  ],
-                ),
-                child: Column(
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.all(_cardPadding),
-                      child: _buildCardHeader(),
-                    ),
-                    const Divider(height: 1, color: _border),
-                    Expanded(child: _buildList()),
-                    const Divider(height: 1, color: _border),
-                    _buildFooter(),
-                  ],
+      body: SafeArea(
+        child: Padding(
+          padding: EdgeInsets.symmetric(horizontal: pad, vertical: vPad),
+          child: Column(
+            children: [
+              _buildTopbar(),
+              const SizedBox(height: 14),
+              const SizedBox(height: 14),
+              Expanded(
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: _surface,
+                    borderRadius: BorderRadius.circular(_radius),
+                    boxShadow: const [
+                      BoxShadow(color: Color(0x0A1C1B1A), blurRadius: 4, offset: Offset(0, 1)),
+                      BoxShadow(color: Color(0x1A1C1B1A), blurRadius: 24, offset: Offset(0, 8)),
+                    ],
+                  ),
+                  child: Column(
+                    children: [
+                      Padding(
+                        padding: EdgeInsets.all(headerPad),
+                        child: _buildCardHeader(),
+                      ),
+                      const Divider(height: 1, color: _border),
+                      Expanded(child: _buildList()),
+                      const Divider(height: 1, color: _border),
+                      _buildFooter(),
+                    ],
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -173,8 +181,58 @@ class _MechanicDashboardScreenState extends State<MechanicDashboardScreen> {
   // Dark rounded topbar with the orange brand-icon block, matching the
   // mockup's `.topbar` / `.brand` / `.brand-icon` / `.topbar-actions`.
   Widget _buildTopbar() {
+    final compact = _isCompact(context);
+    final brand = Row(
+      children: [
+        Container(
+          width: compact ? 44 : 52,
+          height: compact ? 44 : 52,
+          decoration: BoxDecoration(
+            color: _accent,
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(Icons.build_outlined, color: Colors.white, size: compact ? 22 : 26),
+        ),
+        SizedBox(width: compact ? 12 : 16),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'MECHANIC WORKSPACE',
+                style: GoogleFonts.oswald(fontSize: compact ? 18 : 24, color: _accentDark, fontWeight: FontWeight.w900),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                'Manage all repairs, invoices and operations',
+                style: TextStyle(fontSize: compact ? 12.5 : 13.5, color: const Color(0xFF9CA3AF)),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+
+    final recordsBtn = _topbarGhostButton(
+      icon: Icons.bar_chart,
+      label: 'Garage Records',
+      expand: compact,
+      onPressed: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const GarageRecordsScreen()),
+        );
+      },
+    );
+    final logoutBtn = _topbarGhostButton(
+      icon: Icons.logout,
+      label: 'Log out',
+      expand: compact,
+      onPressed: () => context.read<AuthState>().logout(),
+    );
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 22),
+      padding: EdgeInsets.symmetric(horizontal: compact ? 16 : 28, vertical: compact ? 16 : 22),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(_radius),
@@ -183,59 +241,35 @@ class _MechanicDashboardScreenState extends State<MechanicDashboardScreen> {
           BoxShadow(color: Color(0x1A1C1B1A), blurRadius: 24, offset: Offset(0, 8)),
         ],
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 52,
-                height: 52,
-                decoration: BoxDecoration(
-                  color: _accent,
-                  borderRadius: BorderRadius.circular(10),
+      child: compact
+          ? Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                brand,
+                const SizedBox(height: 14),
+                Row(
+                  children: [
+                    Expanded(child: recordsBtn),
+                    const SizedBox(width: 10),
+                    Expanded(child: logoutBtn),
+                  ],
                 ),
-                child: const Icon(Icons.build_outlined, color: Colors.white, size: 26),
-              ),
-              const SizedBox(width: 16),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'MECHANIC WORKSPACE',
-                    style: GoogleFonts.oswald(fontSize: 24, color: _accentDark, fontWeight: FontWeight.w900),
-                  ),
-                  const SizedBox(height: 2),
-                  const Text(
-                    'Manage all repairs, invoices and operations',
-                    style: TextStyle(fontSize: 13.5, color: Color(0xFF9CA3AF)),
-                  ),
-                ],
-              ),
-            ],
-          ),
-          Row(
-            children: [
-              _topbarGhostButton(
-                icon: Icons.bar_chart,
-                label: 'Garage Records',
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const GarageRecordsScreen()),
-                  );
-                },
-              ),
-              const SizedBox(width: 10),
-              _topbarGhostButton(
-                icon: Icons.logout,
-                label: 'Log out',
-                onPressed: () => context.read<AuthState>().logout(),
-              ),
-            ],
-          ),
-        ],
-      ),
+              ],
+            )
+          : Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(child: brand),
+                const SizedBox(width: 16),
+                Row(
+                  children: [
+                    recordsBtn,
+                    const SizedBox(width: 10),
+                    logoutBtn,
+                  ],
+                ),
+              ],
+            ),
     );
   }
 
@@ -243,17 +277,18 @@ class _MechanicDashboardScreenState extends State<MechanicDashboardScreen> {
     required IconData icon,
     required String label,
     required VoidCallback onPressed,
+    bool expand = false,
   }) {
-    return OutlinedButton.icon(
+    final button = OutlinedButton.icon(
       onPressed: onPressed,
-      icon: Icon(icon, size: 16,color: _accent),
-      label: Text(label, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600,color: _accent)),
+      icon: Icon(icon, size: 16, color: _accent),
+      label: Text(label, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: _accent)),
       style: OutlinedButton.styleFrom(
         foregroundColor: const Color(0xFFE5E7EB),
         backgroundColor: _accent,
         side: const BorderSide(color: _accentDark),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+        padding: EdgeInsets.symmetric(horizontal: expand ? 10 : 16, vertical: expand ? 14 : 20),
         textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
       ).copyWith(
         backgroundColor: WidgetStateProperty.resolveWith((states) {
@@ -262,54 +297,110 @@ class _MechanicDashboardScreenState extends State<MechanicDashboardScreen> {
         }),
       ),
     );
+    return expand ? SizedBox(width: double.infinity, child: button) : button;
   }
 
   Widget _buildCardHeader() {
+    final compact = _isCompact(context);
+    final title = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'INVOICES',
+          style: GoogleFonts.oswald(fontSize: compact ? 18 : 20, color: _ink, fontWeight: FontWeight.w600, letterSpacing: 0.3),
+        ),
+        const SizedBox(height: 4),
+        const Text(
+          'View, edit and manage all mechanic records',
+          style: TextStyle(fontSize: 14, color: _muted),
+        ),
+      ],
+    );
+
+    final durationBtn = SizedBox(
+      height: 45,
+      child: OutlinedButton.icon(
+        onPressed: _pickDateRange,
+        icon: const Icon(Icons.calendar_today_outlined, size: 16, color: _accent),
+        label: Text(
+          _selectedDateRange == null
+              ? 'Duration'
+              : '${DateFormat('MMM d').format(_selectedDateRange!.start)} - ${DateFormat('MMM d').format(_selectedDateRange!.end)}',
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(color: _accent),
+        ),
+        style: OutlinedButton.styleFrom(
+          foregroundColor: _ink,
+          backgroundColor: const Color.fromARGB(93, 184, 134, 58),
+          side: const BorderSide(color: _accent),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+        ).copyWith(
+          side: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.hovered)) return const BorderSide(color: _muted2);
+            return const BorderSide(color: _accent);
+          }),
+        ),
+      ),
+    );
+
+    final newInvoiceBtn = SizedBox(
+      height: 45,
+      width: compact ? double.infinity : null,
+      child: ElevatedButton.icon(
+        onPressed: _goToCreate,
+        icon: const Icon(Icons.add, size: 18),
+        label: const Text('New Invoice'),
+        style: ElevatedButton.styleFrom(
+          foregroundColor: Colors.white,
+          backgroundColor: _accent,
+          elevation: 0,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+        ).copyWith(
+          backgroundColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.hovered)) return _accentDark;
+            return _accent;
+          }),
+        ),
+      ),
+    );
+
+    if (compact) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          title,
+          const SizedBox(height: 14),
+          _buildSearchBar(expand: true),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(child: durationBtn),
+              if (_selectedDateRange != null) ...[
+                const SizedBox(width: 6),
+                IconButton(
+                  icon: const Icon(Icons.clear, color: _muted),
+                  onPressed: _clearSearch,
+                ),
+              ],
+            ],
+          ),
+          const SizedBox(height: 10),
+          newInvoiceBtn,
+        ],
+      );
+    }
+
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'INVOICES',
-                style: GoogleFonts.oswald(fontSize: 20, color: _ink, fontWeight: FontWeight.w600, letterSpacing: 0.3),
-              ),
-              const SizedBox(height: 4),
-              const Text(
-                'View, edit and manage all mechanic records',
-                style: TextStyle(fontSize: 14, color: _muted),
-              ),
-            ],
-          ),
-        ),
+        Expanded(child: title),
         const SizedBox(width: 20),
         _buildSearchBar(),
         const SizedBox(width: 10),
-        SizedBox(
-          height: 45,
-          child: OutlinedButton.icon(
-            onPressed: _pickDateRange,
-            icon: const Icon(Icons.calendar_today_outlined, size: 16, color: _accent),
-            label: Text(_selectedDateRange == null
-                ? 'Duration'
-                : '${DateFormat('MMM d').format(_selectedDateRange!.start)} - ${DateFormat('MMM d').format(_selectedDateRange!.end)}', style: TextStyle(color: _accent)),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: _ink,
-              backgroundColor: const Color.fromARGB(93, 184, 134, 58),
-              side: const BorderSide(color: _accent),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-            ).copyWith(
-              side: WidgetStateProperty.resolveWith((states) {
-                if (states.contains(WidgetState.hovered)) return const BorderSide(color: _muted2);
-                return const BorderSide(color: _accent);
-              }),
-            ),
-          ),
-        ),
+        durationBtn,
         if (_selectedDateRange != null) ...[
           const SizedBox(width: 6),
           IconButton(
@@ -318,34 +409,15 @@ class _MechanicDashboardScreenState extends State<MechanicDashboardScreen> {
           ),
         ],
         const SizedBox(width: 10),
-        SizedBox(
-          height: 45,
-          child: ElevatedButton.icon(
-            onPressed: _goToCreate,
-            icon: const Icon(Icons.add, size: 18),
-            label: const Text('New Invoice'),
-            style: ElevatedButton.styleFrom(
-              foregroundColor: Colors.white,
-              backgroundColor: _accent,
-              elevation: 0,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-              textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-            ).copyWith(
-              backgroundColor: WidgetStateProperty.resolveWith((states) {
-                if (states.contains(WidgetState.hovered)) return _accentDark;
-                return _accent;
-              }),
-            ),
-          ),
-        ),
+        newInvoiceBtn,
       ],
     );
   }
 
-  Widget _buildSearchBar() {
+  Widget _buildSearchBar({bool expand = false}) {
     return PlateSearchBar(
       controller: _plateController,
-      width: 220,
+      width: expand ? double.infinity : 220,
       onSubmitted: (_) => _search(),
     );
   }
@@ -355,8 +427,9 @@ class _MechanicDashboardScreenState extends State<MechanicDashboardScreen> {
       builder: (context, state, _) {
         if (state.invoices.isEmpty) return const SizedBox.shrink();
         final count = state.invoices.length;
+        final compact = _isCompact(context);
         return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: _cardPadding, vertical: 14),
+          padding: EdgeInsets.symmetric(horizontal: compact ? 16 : _cardPadding, vertical: 14),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -389,7 +462,7 @@ class _MechanicDashboardScreenState extends State<MechanicDashboardScreen> {
           border: Border.all(color: _border),
           borderRadius: BorderRadius.circular(7),
         ),
-        child: Icon(icon, size: 16, color: enabled ? _ink : _muted2.withOpacity(0.5)),
+        child: Icon(icon, size: 16, color: enabled ? _ink : _muted2.withValues(alpha: 0.5)),
       ),
     );
   }
@@ -403,18 +476,26 @@ class _MechanicDashboardScreenState extends State<MechanicDashboardScreen> {
 
         if (state.invoices.isEmpty) {
           return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(Icons.inbox_outlined, size: 38, color: _muted2),
-                const SizedBox(height: 12),
-                const Text(
-                  'No invoices yet. Create one to get started.',
-                  style: TextStyle(color: _muted, fontSize: 15),
-                ),
-              ],
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.inbox_outlined, size: 38, color: _muted2),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'No invoices yet. Create one to get started.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: _muted, fontSize: 15),
+                  ),
+                ],
+              ),
             ),
           );
+        }
+
+        if (_isCompact(context)) {
+          return _buildInvoiceCards(state.invoices);
         }
 
         return Theme(
@@ -500,6 +581,98 @@ class _MechanicDashboardScreenState extends State<MechanicDashboardScreen> {
     );
   }
 
+  Widget _buildInvoiceCards(List<MechanicInvoiceSummary> invoices) {
+    return ListView.separated(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+      itemCount: invoices.length,
+      separatorBuilder: (_, __) => const SizedBox(height: 10),
+      itemBuilder: (context, index) {
+        final inv = invoices[index];
+        final statusColor = _statusColor(inv.paymentStatus);
+        return Container(
+          decoration: BoxDecoration(
+            color: _surface,
+            border: Border.all(color: _border),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Container(
+                  width: 4,
+                  decoration: BoxDecoration(
+                    color: statusColor,
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(9),
+                      bottomLeft: Radius.circular(9),
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          inv.name ?? '—',
+                          style: const TextStyle(fontWeight: FontWeight.w600, color: _ink, fontSize: 15),
+                        ),
+                        const SizedBox(height: 8),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          children: [
+                            _buildPlateBadge(inv.plateNumber),
+                            _buildBadge(inv.paymentStatus),
+                            Text(
+                              DateFormat('MMM dd, yyyy').format(inv.invoiceDate),
+                              style: GoogleFonts.jetBrainsMono(fontSize: 13, color: _ink),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _buildActionButton(
+                                icon: Icons.visibility_outlined,
+                                label: 'View',
+                                textColor: _steel,
+                                bgColor: _steelTint,
+                                hoverColor: const Color(0xFFDCE9F2),
+                                onTap: () => _goToDetail(inv),
+                                expand: true,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: _buildActionButton(
+                                icon: Icons.delete_outline,
+                                label: 'Delete',
+                                textColor: _unpaid,
+                                bgColor: _unpaidBg,
+                                hoverColor: const Color(0xFFF6D9D9),
+                                onTap: () => _confirmDelete(inv),
+                                expand: true,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   // Mimics the mockup's `.tag-bar` — a thin colored strip on the leading
   // edge of the row, plus the customer name label.
   Widget _buildCustomerCell(MechanicInvoiceSummary inv, Color statusColor) {
@@ -508,9 +681,12 @@ class _MechanicDashboardScreenState extends State<MechanicDashboardScreen> {
       children: [
         Container(width: 4, height: 32, color: statusColor),
         const SizedBox(width: 14),
-        Text(
-          inv.name ?? '—',
-          style: const TextStyle(fontWeight: FontWeight.w600, color: _ink, fontSize: 14.5),
+        Flexible(
+          child: Text(
+            inv.name ?? '—',
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontWeight: FontWeight.w600, color: _ink, fontSize: 14.5),
+          ),
         ),
       ],
     );
@@ -577,19 +753,22 @@ class _MechanicDashboardScreenState extends State<MechanicDashboardScreen> {
     required Color bgColor,
     required Color hoverColor,
     required VoidCallback onTap,
+    bool expand = false,
   }) {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(7),
       hoverColor: hoverColor,
       child: Container(
+        width: expand ? double.infinity : null,
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
           color: bgColor,
           borderRadius: BorderRadius.circular(7),
         ),
         child: Row(
-          mainAxisSize: MainAxisSize.min,
+          mainAxisSize: expand ? MainAxisSize.max : MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(icon, size: 14, color: textColor),
             const SizedBox(width: 5),
@@ -605,8 +784,10 @@ class _MechanicDashboardScreenState extends State<MechanicDashboardScreen> {
       context: context,
       builder: (ctx) => Dialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
         child: Container(
           width: 380,
+          constraints: BoxConstraints(maxWidth: MediaQuery.sizeOf(ctx).width - 40),
           padding: const EdgeInsets.all(28),
           child: Column(
             mainAxisSize: MainAxisSize.min,

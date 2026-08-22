@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from app.dependencies.auth import get_current_access_key, get_db
+from app.dependencies.quota import require_db_quota
 from app.models.access_key import AccessKey
 from app.models.utility_bill import UtilityBillType as ModelUtilityBillType
 from app.schemas.utility_bill import (
@@ -27,6 +28,7 @@ def create_utility_bill_endpoint(
     payload: UtilityBillCreate,
     db: Session = Depends(get_db),
     current_access_key: AccessKey = Depends(get_current_access_key),
+    _quota: None = Depends(require_db_quota),
 ):
     try:
         # Convert schema enum to model enum

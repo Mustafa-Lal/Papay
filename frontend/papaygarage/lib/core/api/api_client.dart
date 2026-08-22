@@ -19,10 +19,13 @@ class ApiClient {
     final uri = _buildUri(endpoint, queryParameters);
     final headers = await buildHeaders();
     
-    final response = await _client.get(uri, headers: headers);
-    await _handleSessionRefresh(response);
-    
-    return _processResponse(response);
+    try {
+      final response = await _client.get(uri, headers: headers);
+      await _handleSessionRefresh(response);
+      return _processResponse(response);
+    } catch (e) {
+      _handleNetworkError(e);
+    }
   }
 
   /// Perform a POST request
@@ -30,14 +33,17 @@ class ApiClient {
     final uri = _buildUri(endpoint);
     final headers = await buildHeaders();
     
-    final response = await _client.post(
-      uri,
-      headers: headers,
-      body: body != null ? jsonEncode(body) : null,
-    );
-    await _handleSessionRefresh(response);
-    
-    return _processResponse(response);
+    try {
+      final response = await _client.post(
+        uri,
+        headers: headers,
+        body: body != null ? jsonEncode(body) : null,
+      );
+      await _handleSessionRefresh(response);
+      return _processResponse(response);
+    } catch (e) {
+      _handleNetworkError(e);
+    }
   }
 
   /// Perform a POST multipart request (for file uploads)
@@ -51,11 +57,7 @@ class ApiClient {
     final uri = _buildUri(endpoint);
     final headers = await buildHeaders();
     
-    // http.MultipartRequest doesn't automatically merge standard headers perfectly if Content-Type is overridden,
-    // but we can pass our custom Auth headers safely.
     final request = http.MultipartRequest('POST', uri);
-    
-    // We remove Content-Type because MultipartRequest needs to set its own Content-Type with the boundary.
     headers.remove('Content-Type');
     request.headers.addAll(headers);
 
@@ -69,11 +71,14 @@ class ApiClient {
       filename: filename,
     ));
 
-    final streamedResponse = await _client.send(request);
-    final response = await http.Response.fromStream(streamedResponse);
-    await _handleSessionRefresh(response);
-    
-    return _processResponse(response);
+    try {
+      final streamedResponse = await _client.send(request);
+      final response = await http.Response.fromStream(streamedResponse);
+      await _handleSessionRefresh(response);
+      return _processResponse(response);
+    } catch (e) {
+      _handleNetworkError(e);
+    }
   }
 
   /// Perform a PUT request
@@ -81,14 +86,17 @@ class ApiClient {
     final uri = _buildUri(endpoint);
     final headers = await buildHeaders();
     
-    final response = await _client.put(
-      uri,
-      headers: headers,
-      body: body != null ? jsonEncode(body) : null,
-    );
-    await _handleSessionRefresh(response);
-    
-    return _processResponse(response);
+    try {
+      final response = await _client.put(
+        uri,
+        headers: headers,
+        body: body != null ? jsonEncode(body) : null,
+      );
+      await _handleSessionRefresh(response);
+      return _processResponse(response);
+    } catch (e) {
+      _handleNetworkError(e);
+    }
   }
 
   /// Perform a PATCH request
@@ -96,14 +104,17 @@ class ApiClient {
     final uri = _buildUri(endpoint);
     final headers = await buildHeaders();
     
-    final response = await _client.patch(
-      uri,
-      headers: headers,
-      body: body != null ? jsonEncode(body) : null,
-    );
-    await _handleSessionRefresh(response);
-    
-    return _processResponse(response);
+    try {
+      final response = await _client.patch(
+        uri,
+        headers: headers,
+        body: body != null ? jsonEncode(body) : null,
+      );
+      await _handleSessionRefresh(response);
+      return _processResponse(response);
+    } catch (e) {
+      _handleNetworkError(e);
+    }
   }
 
   /// Perform a DELETE request
@@ -111,10 +122,13 @@ class ApiClient {
     final uri = _buildUri(endpoint);
     final headers = await buildHeaders();
     
-    final response = await _client.delete(uri, headers: headers);
-    await _handleSessionRefresh(response);
-    
-    return _processResponse(response);
+    try {
+      final response = await _client.delete(uri, headers: headers);
+      await _handleSessionRefresh(response);
+      return _processResponse(response);
+    } catch (e) {
+      _handleNetworkError(e);
+    }
   }
 
   // --- Internal Helpers ---
@@ -158,16 +172,24 @@ class ApiClient {
       return jsonDecode(response.body);
     }
 
-    String message = 'Unknown error occurred.';
+    String message = 'An unexpected server error occurred. Please try again.';
     try {
       final decoded = jsonDecode(response.body);
       if (decoded is Map && decoded.containsKey('detail')) {
         message = decoded['detail'].toString();
-      } else {
-        message = response.body;
+      } else if (decoded is Map && decoded.containsKey('message')) {
+        message = decoded['message'].toString();
+      } else if (decoded is String) {
+        message = decoded;
       }
     } catch (_) {
-      message = response.body.isNotEmpty ? response.body : response.reasonPhrase ?? 'Error';
+      if (response.statusCode == 404) {
+        message = 'The requested resource was not found.';
+      } else if (response.statusCode >= 500) {
+        message = 'The server encountered an error. Please try again later.';
+      } else if (response.statusCode == 401 || response.statusCode == 403) {
+        message = 'You are not authorized to perform this action.';
+      }
     }
 
     switch (response.statusCode) {
@@ -186,5 +208,17 @@ class ApiClient {
       default:
         throw ApiException(response.statusCode, message);
     }
+  }
+
+  Never _handleNetworkError(Object e) {
+    if (e is ApiException) throw e;
+    final errorString = e.toString().toLowerCase();
+    if (errorString.contains('socket') || 
+        errorString.contains('connection refused') || 
+        errorString.contains('failed host lookup') ||
+        errorString.contains('connection timed out')) {
+      throw ApiException(503, 'Unable to connect to the server. Please check your internet connection or ensure the server is running.');
+    }
+    throw ApiException(500, 'An unexpected network error occurred. Please try again.');
   }
 }

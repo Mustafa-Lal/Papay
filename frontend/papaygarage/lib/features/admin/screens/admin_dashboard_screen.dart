@@ -13,6 +13,9 @@ class AdminDashboardScreen extends StatefulWidget {
 }
 
 class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
+  // Anything narrower than this is treated as "mobile" layout.
+  static const double _mobileBreakpoint = 700;
+
   @override
   void initState() {
     super.initState();
@@ -51,80 +54,100 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               ),
             ),
           ),
-          Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 760),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 32),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    _buildTopbar(context),
-                    const SizedBox(height: 28),
-                    Expanded(
-                      child: _buildCard(context),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final bool isMobile = constraints.maxWidth < _mobileBreakpoint;
+              return Center(
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxWidth: isMobile ? double.infinity : 760,
+                  ),
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: isMobile ? 12 : 20,
+                      vertical: isMobile ? 20 : 32,
                     ),
-                  ],
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        _buildTopbar(context, isMobile),
+                        SizedBox(height: isMobile ? 18 : 28),
+                        Expanded(
+                          child: _buildCard(context, isMobile),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
-              ),
-            ),
+              );
+            },
           ),
         ],
       ),
     );
   }
 
-  Widget _buildTopbar(BuildContext context) {
+  Widget _buildTopbar(BuildContext context, bool isMobile) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Row(
-          children: [
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: const Color.fromRGBO(180, 119, 10, 0.10),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: const Icon(
-                Icons.vpn_key_rounded,
-                color: Color(0xFFB4770A),
-                size: 19,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: const [
-                Text(
-                  'Welcome, Admin',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF1C2024),
-                    letterSpacing: -0.18,
-                  ),
+        Expanded(
+          child: Row(
+            children: [
+              Container(
+                width: isMobile ? 34 : 40,
+                height: isMobile ? 34 : 40,
+                decoration: BoxDecoration(
+                  color: const Color.fromRGBO(180, 119, 10, 0.10),
+                  borderRadius: BorderRadius.circular(10),
                 ),
-                SizedBox(height: 2),
-                Text(
-                  'Manage account access below',
-                  style: TextStyle(
-                    fontSize: 12.5,
-                    color: Color(0xFF6B7280),
-                  ),
+                child: Icon(
+                  Icons.vpn_key_rounded,
+                  color: const Color(0xFFB4770A),
+                  size: isMobile ? 16 : 19,
                 ),
-              ],
-            ),
-          ],
+              ),
+              const SizedBox(width: 12),
+              Flexible(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Welcome, Admin',
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: isMobile ? 15.5 : 18,
+                        fontWeight: FontWeight.w600,
+                        color: const Color(0xFF1C2024),
+                        letterSpacing: -0.18,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Manage account access below',
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: isMobile ? 11.5 : 12.5,
+                        color: const Color(0xFF6B7280),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
+        const SizedBox(width: 8),
         OutlinedButton.icon(
           onPressed: () => context.read<AuthState>().logout(),
           style: OutlinedButton.styleFrom(
             backgroundColor: const Color(0xFFFFFFFF),
             foregroundColor: const Color(0xFF1C2024),
             side: const BorderSide(color: Color(0xFFE4E7EA)),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+            padding: EdgeInsets.symmetric(
+              horizontal: isMobile ? 12 : 16,
+              vertical: isMobile ? 14 : 20,
+            ),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(9),
             ),
@@ -135,13 +158,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             ),
           ),
           icon: const Icon(Icons.logout, size: 15),
-          label: const Text('Log out'),
+          // Save horizontal space on small screens by dropping the label.
+          label: isMobile ? const SizedBox.shrink() : const Text('Log out'),
         ),
       ],
     );
   }
 
-  Widget _buildCard(BuildContext context) {
+  Widget _buildCard(BuildContext context, bool isMobile) {
     return Container(
       decoration: BoxDecoration(
         color: const Color(0xFFFFFFFF),
@@ -160,7 +184,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         children: [
           // Card Header
           Container(
-            padding: const EdgeInsets.fromLTRB(24, 20, 24, 16),
+            padding: EdgeInsets.fromLTRB(
+              isMobile ? 16 : 24,
+              isMobile ? 16 : 20,
+              isMobile ? 16 : 24,
+              isMobile ? 14 : 16,
+            ),
             decoration: const BoxDecoration(
               border: Border(bottom: BorderSide(color: Color(0xFFE4E7EA))),
             ),
@@ -171,32 +200,37 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    children: const [
+                    children: [
                       Text(
                         'User accounts',
                         style: TextStyle(
-                          fontSize: 14.5,
+                          fontSize: isMobile ? 13.5 : 14.5,
                           fontWeight: FontWeight.w600,
-                          color: Color(0xFF1C2024),
+                          color: const Color(0xFF1C2024),
                         ),
                       ),
-                      SizedBox(height: 3),
+                      const SizedBox(height: 3),
                       Text(
                         'Activate or deactivate access by role',
+                        overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                          fontSize: 12.5,
-                          color: Color(0xFF6B7280),
+                          fontSize: isMobile ? 11.5 : 12.5,
+                          color: const Color(0xFF6B7280),
                         ),
                       ),
                     ],
                   ),
                 ),
+                const SizedBox(width: 8),
                 ElevatedButton.icon(
                   onPressed: _showCreateKeyDialog,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFFB4770A),
                     foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 20),
+                    padding: EdgeInsets.symmetric(
+                      horizontal: isMobile ? 12 : 15,
+                      vertical: isMobile ? 14 : 20,
+                    ),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(9),
                     ),
@@ -207,12 +241,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     ),
                   ),
                   icon: const Icon(Icons.add, size: 15),
-                  label: const Text('Create key'),
+                  label: isMobile
+                      ? const SizedBox.shrink()
+                      : const Text('Create key'),
                 ),
               ],
             ),
           ),
-          // Table
+          // Table / List
           Expanded(
             child: Consumer<AdminState>(
               builder: (context, state, child) {
@@ -224,7 +260,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text(state.errorMessage!, style: const TextStyle(color: Colors.red)),
+                        Text(state.errorMessage!,
+                            style: const TextStyle(color: Colors.red)),
                         const SizedBox(height: 16),
                         ElevatedButton(
                           onPressed: () => state.fetchKeys(),
@@ -242,6 +279,24 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     ),
                   );
                 }
+
+                if (isMobile) {
+                  // Stacked card layout — avoids cramming a multi-column
+                  // table into a narrow screen.
+                  return ListView.separated(
+                    itemCount: state.keys.length,
+                    separatorBuilder: (context, index) => const Divider(
+                      height: 1,
+                      thickness: 1,
+                      color: Color(0xFFE4E7EA),
+                    ),
+                    itemBuilder: (context, index) {
+                      return _buildMobileKeyCard(
+                          context, state.keys[index], index);
+                    },
+                  );
+                }
+
                 return ListView.separated(
                   itemCount: state.keys.length + 1,
                   separatorBuilder: (context, index) => const Divider(
@@ -253,7 +308,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     if (index == 0) {
                       return _buildTableHeader();
                     }
-                    return _buildTableRow(context, state.keys[index - 1], index - 1);
+                    return _buildTableRow(
+                        context, state.keys[index - 1], index - 1);
                   },
                 );
               },
@@ -264,6 +320,176 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
+  Color _roleColor(String roleName) {
+    final String lower = roleName.toLowerCase();
+    if (lower.contains('insurance')) return const Color(0xFF5B8DEF);
+    if (lower.contains('owner')) return const Color(0xFFB4770A);
+    if (lower.contains('mechanic')) return const Color(0xFF8B6FE0);
+    if (lower.contains('admin')) return const Color(0xFFC4453A);
+    return const Color(0xFF6B7280);
+  }
+
+  Future<void> _confirmAndDelete(
+      BuildContext context, AccessKeyModel keyModel) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete Access Key'),
+        content: const Text(
+            'Are you sure you want to permanently delete this access key?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (confirm == true && context.mounted) {
+      context.read<AdminState>().deleteKey(keyModel.id);
+    }
+  }
+
+  Widget _statusBadge(bool active) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: active
+            ? const Color.fromRGBO(47, 147, 102, 0.10)
+            : const Color.fromRGBO(196, 69, 58, 0.08),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 6,
+            height: 6,
+            decoration: BoxDecoration(
+              color: active ? const Color(0xFF2F9366) : const Color(0xFFC4453A),
+              shape: BoxShape.circle,
+            ),
+          ),
+          const SizedBox(width: 6),
+          Text(
+            active ? 'Active' : 'Not active',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: active ? const Color(0xFF2F9366) : const Color(0xFFC4453A),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ---- Mobile: stacked card row ----
+  Widget _buildMobileKeyCard(
+      BuildContext context, AccessKeyModel keyModel, int index) {
+    final String roleName = keyModel.roleName;
+    final Color roleColor = _roleColor(roleName);
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text(
+                (index + 1).toString().padLeft(2, '0'),
+                style: const TextStyle(
+                  fontFamily: 'monospace',
+                  fontSize: 11.5,
+                  color: Color(0xFF6B7280),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Container(
+                width: 7,
+                height: 7,
+                decoration: BoxDecoration(
+                  color: roleColor,
+                  shape: BoxShape.circle,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  roleName,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: Color(0xFF1C2024),
+                  ),
+                ),
+              ),
+              _statusBadge(keyModel.active),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: TextButton(
+                  onPressed: () {
+                    context
+                        .read<AdminState>()
+                        .toggleKeyStatus(keyModel.id, keyModel.active);
+                  },
+                  style: TextButton.styleFrom(
+                    backgroundColor: keyModel.active
+                        ? const Color.fromARGB(22, 255, 0, 0)
+                        : const Color(0xFF2F9366),
+                    foregroundColor: keyModel.active
+                        ? const Color(0xFFC4453A)
+                        : const Color(0xFFFFFFFF),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      side: BorderSide(
+                        color: keyModel.active
+                            ? const Color.fromRGBO(196, 69, 58, 0.08)
+                            : Colors.transparent,
+                      ),
+                    ),
+                    minimumSize: Size.zero,
+                  ),
+                  child: Text(
+                    keyModel.active ? 'Deactivate' : 'Activate',
+                    style: const TextStyle(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              IconButton(
+                icon: const Icon(Icons.delete_outline, size: 18),
+                color: const Color(0xFFC4453A),
+                splashRadius: 20,
+                padding: EdgeInsets.zero,
+                constraints:
+                    const BoxConstraints(minWidth: 36, minHeight: 36),
+                tooltip: 'Delete Key',
+                onPressed: () => _confirmAndDelete(context, keyModel),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ---- Desktop: table header ----
   Widget _buildTableHeader() {
     return Container(
       color: const Color(0xFFFAFAFA),
@@ -324,13 +550,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
-  Widget _buildTableRow(BuildContext context, AccessKeyModel keyModel, int index) {
+  // ---- Desktop: table row ----
+  Widget _buildTableRow(
+      BuildContext context, AccessKeyModel keyModel, int index) {
     final String roleName = keyModel.roleName;
-    Color roleColor = const Color(0xFF6B7280);
-    if (roleName.toLowerCase().contains('insurance')) roleColor = const Color(0xFF5B8DEF);
-    else if (roleName.toLowerCase().contains('owner')) roleColor = const Color(0xFFB4770A);
-    else if (roleName.toLowerCase().contains('mechanic')) roleColor = const Color(0xFF8B6FE0);
-    else if (roleName.toLowerCase().contains('admin')) roleColor = const Color(0xFFC4453A);
+    final Color roleColor = _roleColor(roleName);
 
     return InkWell(
       onTap: () {}, // For hover effect if supported
@@ -365,12 +589,15 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     ),
                   ),
                   const SizedBox(width: 9),
-                  Text(
-                    roleName,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                      color: Color(0xFF1C2024),
+                  Flexible(
+                    child: Text(
+                      roleName,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: Color(0xFF1C2024),
+                      ),
                     ),
                   ),
                 ],
@@ -380,43 +607,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             Expanded(
               flex: 2,
               child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: keyModel.active
-                          ? const Color.fromRGBO(47, 147, 102, 0.10)
-                          : const Color.fromRGBO(196, 69, 58, 0.08),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(
-                          width: 6,
-                          height: 6,
-                          decoration: BoxDecoration(
-                            color: keyModel.active
-                                ? const Color(0xFF2F9366)
-                                : const Color(0xFFC4453A),
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          keyModel.active ? 'Active' : 'Not active',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: keyModel.active
-                                ? const Color(0xFF2F9366)
-                                : const Color(0xFFC4453A),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+                children: [_statusBadge(keyModel.active)],
               ),
             ),
             // Action
@@ -431,16 +622,25 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       width: 100,
                       child: TextButton(
                         onPressed: () {
-                          context.read<AdminState>().toggleKeyStatus(keyModel.id, keyModel.active);
+                          context
+                              .read<AdminState>()
+                              .toggleKeyStatus(keyModel.id, keyModel.active);
                         },
                         style: TextButton.styleFrom(
-                          backgroundColor: keyModel.active ? const Color.fromARGB(22, 255, 0, 0) : const Color(0xFF2F9366),
-                          foregroundColor: keyModel.active ? const Color(0xFFC4453A) : const Color(0xFFFFFFFF),
-                          padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 14),
+                          backgroundColor: keyModel.active
+                              ? const Color.fromARGB(22, 255, 0, 0)
+                              : const Color(0xFF2F9366),
+                          foregroundColor: keyModel.active
+                              ? const Color(0xFFC4453A)
+                              : const Color(0xFFFFFFFF),
+                          padding: const EdgeInsets.symmetric(
+                              vertical: 20, horizontal: 14),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(8),
                             side: BorderSide(
-                              color: keyModel.active ? const Color.fromRGBO(196, 69, 58, 0.08) : Colors.transparent,
+                              color: keyModel.active
+                                  ? const Color.fromRGBO(196, 69, 58, 0.08)
+                                  : Colors.transparent,
                             ),
                           ),
                           minimumSize: Size.zero,
@@ -460,31 +660,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       color: const Color(0xFFC4453A),
                       splashRadius: 20,
                       padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                      constraints:
+                          const BoxConstraints(minWidth: 32, minHeight: 32),
                       tooltip: 'Delete Key',
-                      onPressed: () async {
-                        final confirm = await showDialog<bool>(
-                          context: context,
-                          builder: (ctx) => AlertDialog(
-                            title: const Text('Delete Access Key'),
-                            content: const Text('Are you sure you want to permanently delete this access key?'),
-                            actions: [
-                              TextButton(
-                                onPressed: () => Navigator.pop(ctx, false),
-                                child: const Text('Cancel'),
-                              ),
-                              TextButton(
-                                onPressed: () => Navigator.pop(ctx, true),
-                                style: TextButton.styleFrom(foregroundColor: Colors.red),
-                                child: const Text('Delete'),
-                              ),
-                            ],
-                          ),
-                        );
-                        if (confirm == true && context.mounted) {
-                          context.read<AdminState>().deleteKey(keyModel.id);
-                        }
-                      },
+                      onPressed: () => _confirmAndDelete(context, keyModel),
                     ),
                   ],
                 ),

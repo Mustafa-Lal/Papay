@@ -26,6 +26,11 @@ const _cardShadow = BoxShadow(
   offset: Offset(0, 8),
 );
 
+// Responsive tokens
+const double _mobileBreakpoint = 800.0;
+const double _maxContentWidth = 1100.0;
+const double _itemsTableMinWidth = 640.0;
+
 class InvoiceDetailScreen extends StatefulWidget {
   final int invoiceId;
   const InvoiceDetailScreen({super.key, required this.invoiceId});
@@ -77,52 +82,73 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: _bg,
-      body: _loading
-          ? const Center(child: CircularProgressIndicator(color: _gold))
-          : _error != null
-              ? Center(child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(_error!, style: const TextStyle(color: Colors.red)),
-                    const SizedBox(height: 16),
-                    ElevatedButton(
-                      onPressed: _load,
-                      style: ElevatedButton.styleFrom(backgroundColor: _gold),
-                      child: const Text('Retry', style: TextStyle(color: Colors.white)),
-                    ),
-                  ],
-                ))
-              : _buildBody(),
+      body: SafeArea(
+        child: _loading
+            ? const Center(child: CircularProgressIndicator(color: _gold))
+            : _error != null
+                ? Center(child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(_error!, style: const TextStyle(color: Colors.red)),
+                      const SizedBox(height: 16),
+                      ElevatedButton(
+                        onPressed: _load,
+                        style: ElevatedButton.styleFrom(backgroundColor: _gold),
+                        child: const Text('Retry', style: TextStyle(color: Colors.white)),
+                      ),
+                    ],
+                  ))
+                : _buildBody(),
+      ),
     );
   }
 
   Widget _buildBody() {
     final inv = _invoice!;
-    
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = screenWidth < _mobileBreakpoint;
+
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 32),
+      padding: EdgeInsets.symmetric(
+        horizontal: isMobile ? 16 : 40,
+        vertical: isMobile ? 16 : 32,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _buildHeader(inv),
-          const SizedBox(height: 32),
+          _buildHeader(inv, isMobile),
+          SizedBox(height: isMobile ? 20 : 32),
           Expanded(
             child: SingleChildScrollView(
-              child: Column(
-                children: [
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: _maxContentWidth),
+                  child: Column(
                     children: [
-                      Expanded(child: _InvoiceDetailsCard(invoice: inv)),
-                      const SizedBox(width: 24),
-                      Expanded(child: _CustomerCard(invoice: inv, onRefresh: _load)),
+                      if (isMobile)
+                        Column(
+                          children: [
+                            _InvoiceDetailsCard(invoice: inv, isMobile: isMobile),
+                            const SizedBox(height: 16),
+                            _CustomerCard(invoice: inv, onRefresh: _load, isMobile: isMobile),
+                          ],
+                        )
+                      else
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(child: _InvoiceDetailsCard(invoice: inv, isMobile: isMobile)),
+                            const SizedBox(width: 24),
+                            Expanded(child: _CustomerCard(invoice: inv, onRefresh: _load, isMobile: isMobile)),
+                          ],
+                        ),
+                      SizedBox(height: isMobile ? 16 : 24),
+                      _RepairItemsCard(invoice: inv, isMobile: isMobile),
+                      SizedBox(height: isMobile ? 16 : 24),
+                      _ImagesCard(invoice: inv, onRefresh: _load, isMobile: isMobile),
                     ],
                   ),
-                  const SizedBox(height: 24),
-                  _RepairItemsCard(invoice: inv),
-                  const SizedBox(height: 24),
-                  _ImagesCard(invoice: inv, onRefresh: _load),
-                ],
+                ),
               ),
             ),
           ),
@@ -131,8 +157,138 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
     );
   }
 
-  Widget _buildHeader(InsuranceInvoice inv) {
+  Widget _buildHeader(InsuranceInvoice inv, bool isMobile) {
     final isPaid = inv.paymentStatus == PaymentStatus.paid;
+
+    final backButton = OutlinedButton(
+      onPressed: () => Navigator.pop(context, _hasChanges),
+      style: OutlinedButton.styleFrom(
+        padding: EdgeInsets.all(isMobile ? 14 : 20),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        side: const BorderSide(color: _border, width: 1.5),
+        backgroundColor: _cardBg,
+        foregroundColor: _ink,
+      ),
+      child: const Icon(Icons.arrow_back, size: 20, color: _ink),
+    );
+
+    final titleAndBadge = Wrap(
+      crossAxisAlignment: WrapCrossAlignment.center,
+      spacing: 16,
+      runSpacing: 8,
+      children: [
+        Text(
+          'Invoice #${inv.id}',
+          style: TextStyle(
+            fontSize: isMobile ? 21 : 28,
+            fontWeight: FontWeight.w800,
+            color: _ink,
+            letterSpacing: -0.5,
+          ),
+        ),
+        _buildBadge(inv.paymentStatus),
+      ],
+    );
+
+    final subtitle = Text(
+      'Generated on ${DateFormat('MMMM dd, yyyy').format(inv.createdAt)}',
+      style: const TextStyle(fontSize: 15, color: _muted),
+    );
+
+    final printButton = OutlinedButton.icon(
+      onPressed: () {
+        if (_invoice != null) {
+          printInsuranceInvoice(context, _invoice!);
+        }
+      },
+      icon: const Icon(Icons.print_outlined, size: 16),
+      label: const Text('Print'),
+      style: OutlinedButton.styleFrom(
+        foregroundColor: _ink,
+        backgroundColor: _cardBg,
+        side: const BorderSide(color: _border, width: 1.5),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        padding: EdgeInsets.symmetric(horizontal: 20, vertical: isMobile ? 14 : 20),
+        textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13.5),
+      ),
+    );
+
+    final editButton = OutlinedButton.icon(
+      onPressed: () async {
+        if (_invoice == null) return;
+        final changed = await Navigator.push<bool>(
+          context,
+          MaterialPageRoute(
+            builder: (_) => EditInvoiceScreen(invoice: _invoice!),
+          ),
+        );
+        if (mounted && changed == true) {
+          setState(() { _hasChanges = true; });
+          _load();
+        }
+      },
+      icon: const Icon(Icons.edit_outlined, size: 16),
+      label: const Text('Edit'),
+      style: OutlinedButton.styleFrom(
+        foregroundColor: _ink,
+        backgroundColor: _cardBg,
+        side: const BorderSide(color: _border, width: 1.5),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        padding: EdgeInsets.symmetric(horizontal: 20, vertical: isMobile ? 14 : 20),
+        textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13.5),
+      ),
+    );
+
+    final markPaidButton = ElevatedButton.icon(
+      onPressed: _markAsPaid,
+      icon: const Icon(Icons.check_circle_outline, size: 16, color: Colors.white),
+      label: const Text('Mark as Paid'),
+      style: ElevatedButton.styleFrom(
+        foregroundColor: Colors.white,
+        backgroundColor: _gold,
+        elevation: 0,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        padding: EdgeInsets.symmetric(horizontal: 20, vertical: isMobile ? 14 : 20),
+        textStyle: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13.5),
+      ),
+    );
+
+    final actionButtons = Wrap(
+      spacing: 12,
+      runSpacing: 12,
+      children: [
+        printButton,
+        editButton,
+        if (!isPaid) markPaidButton,
+      ],
+    );
+
+    if (isMobile) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              backButton,
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    titleAndBadge,
+                    const SizedBox(height: 6),
+                    subtitle,
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          actionButtons,
+        ],
+      );
+    }
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -143,95 +299,16 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
           children: [
             Row(
               children: [
-                OutlinedButton(
-                  onPressed: () => Navigator.pop(context, _hasChanges),
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.all(20),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                    side: const BorderSide(color: _border, width: 1.5),
-                    backgroundColor: _cardBg,
-                    foregroundColor: _ink,
-                  ),
-                  child: const Icon(Icons.arrow_back, size: 20, color: _ink),
-                ),
+                backButton,
                 const SizedBox(width: 16),
-                Text(
-                  'Invoice #${inv.id}',
-                  style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w800, color: _ink, letterSpacing: -0.5),
-                ),
-                const SizedBox(width: 16),
-                _buildBadge(inv.paymentStatus),
+                titleAndBadge,
               ],
             ),
             const SizedBox(height: 6),
-            Text(
-              'Generated on ${DateFormat('MMMM dd, yyyy').format(inv.createdAt)}',
-              style: const TextStyle(fontSize: 15, color: _muted),
-            ),
+            subtitle,
           ],
         ),
-        Row(
-          children: [
-            OutlinedButton.icon(
-              onPressed: () {
-                if (_invoice != null) {
-                  printInsuranceInvoice(context, _invoice!);
-                }
-              },
-              icon: const Icon(Icons.print_outlined, size: 16),
-              label: const Text('Print'),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: _ink,
-                backgroundColor: _cardBg,
-                side: const BorderSide(color: _border, width: 1.5),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
-                textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13.5),
-              ),
-            ),
-            const SizedBox(width: 12),
-            OutlinedButton.icon(
-              onPressed: () async {
-                if (_invoice == null) return;
-                final changed = await Navigator.push<bool>(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => EditInvoiceScreen(invoice: _invoice!),
-                  ),
-                );
-                if (mounted && changed == true) {
-                  setState(() { _hasChanges = true; });
-                  _load();
-                }
-              },
-              icon: const Icon(Icons.edit_outlined, size: 16),
-              label: const Text('Edit'),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: _ink,
-                backgroundColor: _cardBg,
-                side: const BorderSide(color: _border, width: 1.5),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
-                textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13.5),
-              ),
-            ),
-            const SizedBox(width: 12),
-            if (!isPaid)
-              ElevatedButton.icon(
-                onPressed: _markAsPaid,
-                icon: const Icon(Icons.check_circle_outline, size: 16, color: Colors.white),
-                label: const Text('Mark as Paid'),
-                style: ElevatedButton.styleFrom(
-                  foregroundColor: Colors.white,
-                  backgroundColor: _gold,
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
-                  textStyle: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13.5),
-                ),
-              ),
-          ],
-        ),
+        actionButtons,
       ],
     );
   }
@@ -286,13 +363,14 @@ class _StyledCard extends StatelessWidget {
 // ─────────────────────────────────────────────────────────
 class _InvoiceDetailsCard extends StatelessWidget {
   final InsuranceInvoice invoice;
-  const _InvoiceDetailsCard({required this.invoice});
+  final bool isMobile;
+  const _InvoiceDetailsCard({required this.invoice, required this.isMobile});
 
   @override
   Widget build(BuildContext context) {
     return _StyledCard(
       child: Padding(
-        padding: const EdgeInsets.all(24.0),
+        padding: EdgeInsets.all(isMobile ? 16.0 : 24.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -352,7 +430,8 @@ class _InvoiceDetailsCard extends StatelessWidget {
 class _CustomerCard extends StatelessWidget {
   final InsuranceInvoice invoice;
   final VoidCallback onRefresh;
-  const _CustomerCard({required this.invoice, required this.onRefresh});
+  final bool isMobile;
+  const _CustomerCard({required this.invoice, required this.onRefresh, required this.isMobile});
 
   @override
   Widget build(BuildContext context) {
@@ -361,7 +440,7 @@ class _CustomerCard extends StatelessWidget {
 
     return _StyledCard(
       child: Padding(
-        padding: const EdgeInsets.all(24.0),
+        padding: EdgeInsets.all(isMobile ? 16.0 : 24.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -385,19 +464,21 @@ class _CustomerCard extends StatelessWidget {
                   child: Text(initial, style: const TextStyle(color: _gold, fontWeight: FontWeight.w800, fontSize: 18)),
                 ),
                 const SizedBox(width: 16),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(c.customerName ?? 'Unknown', style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16, color: _ink)),
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        const Icon(Icons.phone_outlined, size: 14, color: _muted),
-                        const SizedBox(width: 4),
-                        Text(c.phoneNumber ?? 'No Phone', style: const TextStyle(color: _muted, fontSize: 13)),
-                      ],
-                    ),
-                  ],
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(c.customerName ?? 'Unknown', style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16, color: _ink)),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          const Icon(Icons.phone_outlined, size: 14, color: _muted),
+                          const SizedBox(width: 4),
+                          Text(c.phoneNumber ?? 'No Phone', style: const TextStyle(color: _muted, fontSize: 13)),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -437,13 +518,14 @@ class _InfoBlock extends StatelessWidget {
 // ─────────────────────────────────────────────────────────
 class _RepairItemsCard extends StatelessWidget {
   final InsuranceInvoice invoice;
-  const _RepairItemsCard({required this.invoice});
+  final bool isMobile;
+  const _RepairItemsCard({required this.invoice, required this.isMobile});
 
   @override
   Widget build(BuildContext context) {
     return _StyledCard(
       child: Padding(
-        padding: const EdgeInsets.all(24.0),
+        padding: EdgeInsets.all(isMobile ? 16.0 : 24.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -459,87 +541,169 @@ class _RepairItemsCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 24),
-            // Header Row
-            Padding(
-              padding: const EdgeInsets.only(bottom: 16),
-              child: Row(
-                children: const [
-                  SizedBox(width: 40, child: Text('#', style: TextStyle(color: _muted, fontSize: 12, fontWeight: FontWeight.w600))),
-                  Expanded(flex: 3, child: Text('Description', style: TextStyle(color: _muted, fontSize: 12, fontWeight: FontWeight.w600))),
-                  Expanded(flex: 1, child: Text('Qty', style: TextStyle(color: _muted, fontSize: 12, fontWeight: FontWeight.w600))),
-                  Expanded(flex: 1, child: Text('Unit Price', style: TextStyle(color: _muted, fontSize: 12, fontWeight: FontWeight.w600))),
-                  Expanded(flex: 1, child: Text('Commission', style: TextStyle(color: _muted, fontSize: 12, fontWeight: FontWeight.w600))),
-                  Expanded(flex: 1, child: Align(alignment: Alignment.centerRight, child: Text('Amount (QAR)', style: TextStyle(color: _muted, fontSize: 12, fontWeight: FontWeight.w600)))),
+            if (isMobile)
+              _buildMobileItems()
+            else
+              _buildDesktopTable(),
+            const Divider(height: 1, color: Color(0xFFF0F0F0)),
+            SizedBox(height: isMobile ? 16 : 24),
+            // Totals
+            if (isMobile)
+              _buildTotals()
+            else
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  SizedBox(width: 320, child: _buildTotals()),
                 ],
               ),
-            ),
-            const Divider(height: 1, color: Color(0xFFF0F0F0)),
-            // Item Rows
-            ...invoice.items.asMap().entries.map((entry) {
-              final idx = entry.key + 1;
-              final item = entry.value;
-              return Padding(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                child: Row(
-                  children: [
-                    SizedBox(width: 40, child: Text('$idx', style: const TextStyle(color: _muted, fontSize: 14))),
-                    Expanded(flex: 3, child: Text(item.description, style: const TextStyle(fontWeight: FontWeight.w600, color: _ink, fontSize: 14))),
-                    Expanded(flex: 1, child: Text('${item.quantity.toInt()}', style: const TextStyle(color: _gold, fontWeight: FontWeight.w600, fontSize: 14))),
-                    Expanded(flex: 1, child: Text(item.unitPrice.toStringAsFixed(2), style: const TextStyle(color: _ink, fontSize: 14))),
-                    Expanded(flex: 1, child: Text(item.commission.toStringAsFixed(2), style: const TextStyle(color: _ink, fontSize: 14))),
-                    Expanded(flex: 1, child: Align(alignment: Alignment.centerRight, child: Text(item.total.toStringAsFixed(2), style: const TextStyle(fontWeight: FontWeight.w700, color: _ink, fontSize: 14)))),
-                  ],
-                ),
-              );
-            }).toList(),
-            const Divider(height: 1, color: Color(0xFFF0F0F0)),
-            const SizedBox(height: 24),
-            // Totals
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                SizedBox(
-                  width: 320,
-                  child: Column(
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Text('Subtotal', style: TextStyle(color: _muted, fontSize: 13)),
-                          Text('QAR ${invoice.subtotal.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.w600, color: _ink, fontSize: 14)),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Row(
-                            children: const [
-                              Text('Papay Charges', style: TextStyle(color: _gold, fontWeight: FontWeight.w600, fontSize: 13)),
-                              Text(' * required', style: TextStyle(color: _goldDark, fontSize: 11)),
-                            ],
-                          ),
-                          Text('QAR ${invoice.laborCharges.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.w600, color: _ink, fontSize: 14)),
-                        ],
-                      ),
-                      const SizedBox(height: 24),
-                      const Divider(height: 1, color: Color(0xFFF0F0F0)),
-                      const SizedBox(height: 24),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Text('TOTAL ONLY', style: TextStyle(fontWeight: FontWeight.w800, color: _ink, fontSize: 16)),
-                          Text('QR ${invoice.grandTotal.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.w800, color: _gold, fontSize: 18)),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildDesktopTable() {
+    final headerRow = Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Row(
+        children: const [
+          SizedBox(width: 40, child: Text('#', style: TextStyle(color: _muted, fontSize: 12, fontWeight: FontWeight.w600))),
+          Expanded(flex: 3, child: Text('Description', style: TextStyle(color: _muted, fontSize: 12, fontWeight: FontWeight.w600))),
+          Expanded(flex: 1, child: Text('Qty', style: TextStyle(color: _muted, fontSize: 12, fontWeight: FontWeight.w600))),
+          Expanded(flex: 1, child: Text('Unit Price', style: TextStyle(color: _muted, fontSize: 12, fontWeight: FontWeight.w600))),
+          Expanded(flex: 1, child: Text('Commission', style: TextStyle(color: _muted, fontSize: 12, fontWeight: FontWeight.w600))),
+          Expanded(flex: 1, child: Align(alignment: Alignment.centerRight, child: Text('Amount (QAR)', style: TextStyle(color: _muted, fontSize: 12, fontWeight: FontWeight.w600)))),
+        ],
+      ),
+    );
+
+    final itemRows = invoice.items.asMap().entries.map((entry) {
+      final idx = entry.key + 1;
+      final item = entry.value;
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        child: Row(
+          children: [
+            SizedBox(width: 40, child: Text('$idx', style: const TextStyle(color: _muted, fontSize: 14))),
+            Expanded(flex: 3, child: Text(item.description, style: const TextStyle(fontWeight: FontWeight.w600, color: _ink, fontSize: 14))),
+            Expanded(flex: 1, child: Text('${item.quantity.toInt()}', style: const TextStyle(color: _gold, fontWeight: FontWeight.w600, fontSize: 14))),
+            Expanded(flex: 1, child: Text(item.unitPrice.toStringAsFixed(2), style: const TextStyle(color: _ink, fontSize: 14))),
+            Expanded(flex: 1, child: Text(item.commission.toStringAsFixed(2), style: const TextStyle(color: _ink, fontSize: 14))),
+            Expanded(flex: 1, child: Align(alignment: Alignment.centerRight, child: Text(item.total.toStringAsFixed(2), style: const TextStyle(fontWeight: FontWeight.w700, color: _ink, fontSize: 14)))),
+          ],
+        ),
+      );
+    }).toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        headerRow,
+        const Divider(height: 1, color: Color(0xFFF0F0F0)),
+        ...itemRows,
+      ],
+    );
+  }
+
+  Widget _buildMobileItems() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: invoice.items.asMap().entries.map((entry) {
+        final idx = entry.key + 1;
+        final item = entry.value;
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SizedBox(width: 24, child: Text('$idx', style: const TextStyle(color: _muted, fontSize: 13))),
+                  Expanded(
+                    child: Text(
+                      item.description,
+                      style: const TextStyle(fontWeight: FontWeight.w600, color: _ink, fontSize: 14),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Padding(
+                padding: const EdgeInsets.only(left: 24),
+                child: Wrap(
+                  spacing: 16,
+                  runSpacing: 6,
+                  children: [
+                    _mobileStat('Qty', '${item.quantity.toInt()}', color: _gold),
+                    _mobileStat('Unit Price', item.unitPrice.toStringAsFixed(2)),
+                    _mobileStat('Commission', item.commission.toStringAsFixed(2)),
+                    _mobileStat('Amount', 'QAR ${item.total.toStringAsFixed(2)}', bold: true),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+              const Divider(height: 1, color: Color(0xFFF0F0F0)),
+            ],
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _mobileStat(String label, String value, {Color? color, bool bold = false}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: const TextStyle(color: _muted, fontSize: 11)),
+        const SizedBox(height: 2),
+        Text(
+          value,
+          style: TextStyle(
+            color: color ?? _ink,
+            fontSize: 13,
+            fontWeight: bold ? FontWeight.w700 : FontWeight.w500,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTotals() {
+    return Column(
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text('Subtotal', style: TextStyle(color: _muted, fontSize: 13)),
+            Text('QAR ${invoice.subtotal.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.w600, color: _ink, fontSize: 14)),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              children: const [
+                Text('Papay Charges', style: TextStyle(color: _gold, fontWeight: FontWeight.w600, fontSize: 13)),
+                Text(' * required', style: TextStyle(color: _goldDark, fontSize: 11)),
+              ],
+            ),
+            Text('QAR ${invoice.laborCharges.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.w600, color: _ink, fontSize: 14)),
+          ],
+        ),
+        const SizedBox(height: 24),
+        const Divider(height: 1, color: Color(0xFFF0F0F0)),
+        const SizedBox(height: 24),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text('TOTAL ONLY', style: TextStyle(fontWeight: FontWeight.w800, color: _ink, fontSize: 16)),
+            Text('QR ${invoice.grandTotal.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.w800, color: _gold, fontSize: 18)),
+          ],
+        ),
+      ],
     );
   }
 }
@@ -550,7 +714,8 @@ class _RepairItemsCard extends StatelessWidget {
 class _ImagesCard extends StatefulWidget {
   final InsuranceInvoice invoice;
   final VoidCallback onRefresh;
-  const _ImagesCard({required this.invoice, required this.onRefresh});
+  final bool isMobile;
+  const _ImagesCard({required this.invoice, required this.onRefresh, required this.isMobile});
 
   @override
   State<_ImagesCard> createState() => _ImagesCardState();
@@ -643,99 +808,133 @@ class _ImagesCardState extends State<_ImagesCard> {
   Widget build(BuildContext context) {
     final beforeImages = widget.invoice.images.where((i) => i.imageType == 'BEFORE').toList();
     final afterImages = widget.invoice.images.where((i) => i.imageType == 'AFTER').toList();
+    final isMobile = widget.isMobile;
+
+    final headerRow = Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(6),
+          decoration: BoxDecoration(color: const Color(0xFFFBF4DF), borderRadius: BorderRadius.circular(6)),
+          child: const Icon(Icons.image_outlined, color: _gold, size: 16),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Text(
+            'Images (${widget.invoice.images.length})',
+            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15, color: _ink),
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      ],
+    );
+
+    final uploadControl = ElevatedButton.icon(
+      onPressed: _uploading ? null : _pickAndUpload,
+      icon: _uploading
+          ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+          : const Icon(Icons.upload_outlined, size: 14),
+      label: Text(_uploading ? 'Uploading...' : 'Upload'),
+      style: ElevatedButton.styleFrom(
+        foregroundColor: Colors.white,
+        backgroundColor: _gold,
+        disabledBackgroundColor: _gold.withValues(alpha: 0.7),
+        disabledForegroundColor: Colors.white,
+        elevation: 0,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        textStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+      ),
+    );
+
+    final viewBeforeButton = OutlinedButton.icon(
+      onPressed: () {
+        if (beforeImages.isNotEmpty) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => _FullScreenImageViewer(
+              images: beforeImages,
+              initialIndex: 0,
+              onDelete: (img) => setState(() => widget.invoice.images.removeWhere((i) => i.id == img.id)),
+            )),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No Before images uploaded yet.')));
+        }
+      },
+      icon: const Icon(Icons.image_search, size: 16),
+      label: Text('View Before (${beforeImages.length})'),
+      style: OutlinedButton.styleFrom(
+        foregroundColor: _muted,
+        side: const BorderSide(color: Color(0xFFE5E5E5)),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      ),
+    );
+
+    final viewAfterButton = OutlinedButton.icon(
+      onPressed: () {
+        if (afterImages.isNotEmpty) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => _FullScreenImageViewer(
+              images: afterImages,
+              initialIndex: 0,
+              onDelete: (img) => setState(() => widget.invoice.images.removeWhere((i) => i.id == img.id)),
+            )),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No After images uploaded yet.')));
+        }
+      },
+      icon: const Icon(Icons.image_search, size: 16),
+      label: Text('View After (${afterImages.length})'),
+      style: OutlinedButton.styleFrom(
+        foregroundColor: _muted,
+        side: const BorderSide(color: Color(0xFFE5E5E5)),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      ),
+    );
 
     return _StyledCard(
       child: Padding(
-        padding: const EdgeInsets.all(24.0),
+        padding: EdgeInsets.all(isMobile ? 16.0 : 24.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(6),
-                      decoration: BoxDecoration(color: const Color(0xFFFBF4DF), borderRadius: BorderRadius.circular(6)),
-                      child: const Icon(Icons.image_outlined, color: _gold, size: 16),
-                    ),
-                    const SizedBox(width: 12),
-                    Text('Images (${widget.invoice.images.length})', style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15, color: _ink)),
-                  ],
-                ),
-                _uploading
-                    ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2, color: _gold))
-                    : ElevatedButton.icon(
-                        onPressed: _pickAndUpload,
-                        icon: const Icon(Icons.upload_outlined, size: 14),
-                        label: const Text('Upload'),
-                        style: ElevatedButton.styleFrom(
-                          foregroundColor: Colors.white,
-                          backgroundColor: _gold,
-                          elevation: 0,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                          textStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
-                        ),
-                      ),
-              ],
-            ),
+            if (isMobile)
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  headerRow,
+                  const SizedBox(height: 14),
+                  SizedBox(width: double.infinity, child: uploadControl),
+                ],
+              )
+            else
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [headerRow, uploadControl],
+              ),
             const SizedBox(height: 24),
             const Divider(height: 1, color: Color(0xFFF0F0F0)),
             const SizedBox(height: 24),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                OutlinedButton.icon(
-                  onPressed: () {
-                    if (beforeImages.isNotEmpty) {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => _FullScreenImageViewer(
-                          images: beforeImages,
-                          initialIndex: 0,
-                          onDelete: (img) => setState(() => widget.invoice.images.removeWhere((i) => i.id == img.id)),
-                        )),
-                      );
-                    } else {
-                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No Before images uploaded yet.')));
-                    }
-                  },
-                  icon: const Icon(Icons.image_search, size: 16),
-                  label: Text('View Before (${beforeImages.length})'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: _muted,
-                    side: const BorderSide(color: Color(0xFFE5E5E5)),
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                OutlinedButton.icon(
-                  onPressed: () {
-                    if (afterImages.isNotEmpty) {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => _FullScreenImageViewer(
-                          images: afterImages,
-                          initialIndex: 0,
-                          onDelete: (img) => setState(() => widget.invoice.images.removeWhere((i) => i.id == img.id)),
-                        )),
-                      );
-                    } else {
-                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No After images uploaded yet.')));
-                    }
-                  },
-                  icon: const Icon(Icons.image_search, size: 16),
-                  label: Text('View After (${afterImages.length})'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: _muted,
-                    side: const BorderSide(color: Color(0xFFE5E5E5)),
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                  ),
-                ),
-              ],
-            ),
+            if (isMobile)
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  viewBeforeButton,
+                  const SizedBox(height: 10),
+                  viewAfterButton,
+                ],
+              )
+            else
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  viewBeforeButton,
+                  const SizedBox(width: 12),
+                  viewAfterButton,
+                ],
+              ),
           ],
         ),
       ),

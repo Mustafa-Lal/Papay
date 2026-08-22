@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from app.dependencies.auth import get_current_access_key, get_db
+from app.dependencies.quota import require_db_quota
 from app.models.access_key import AccessKey
 from app.schemas.mechanic_invoice import (
     MechanicCustomerUpdate,
@@ -41,6 +42,7 @@ def create_invoice_endpoint(
     payload: MechanicInvoiceCreate,
     db: Session = Depends(get_db),
     current_access_key: AccessKey = Depends(get_current_access_key),
+    _quota: None = Depends(require_db_quota),
 ):
     try:
         items_data = [
@@ -220,6 +222,7 @@ def create_item_endpoint(
     payload: MechanicItemCreate,
     db: Session = Depends(get_db),
     _: AccessKey = Depends(get_current_access_key),
+    _quota: None = Depends(require_db_quota),
 ):
     try:
         item = create_mechanic_item(
