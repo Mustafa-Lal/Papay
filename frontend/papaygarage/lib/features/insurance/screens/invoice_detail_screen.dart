@@ -66,14 +66,24 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
 
   Future<void> _markAsPaid() async {
     if (_invoice == null) return;
-    
-    // Optimistic UI Update: Instantly reflect the change in the UI without waiting for the network
-    setState(() {
-      _invoice = _invoice!.copyWith(paymentStatus: PaymentStatus.paid);
-      _hasChanges = true; // signal the dashboard to refresh its list
-    });
 
     final state = context.read<InsuranceState>();
+
+    // FIX: Defer the widget-tree-changing setState to the next frame.
+    // Calling setState synchronously inside this button's own onPressed
+    // handler removes the "Mark as Paid" button (via `if (!isPaid) markPaidButton`)
+    // from the tree while the mouse is still hovering over it — that races
+    // with Flutter's MouseTracker mid-pointer-event and throws the
+    // '!_debugDuringDeviceUpdate' assertion. Scheduling it a frame later lets
+    // the current pointer event finish processing first.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      setState(() {
+        _invoice = _invoice!.copyWith(paymentStatus: PaymentStatus.paid);
+        _hasChanges = true; // signal the dashboard to refresh its list
+      });
+    });
+
     await state.updateInvoice(_invoice!.id, {'payment_status': 'PAID'});
     // We intentionally do not call _load() here to avoid unnecessary GET requests.
   }
@@ -912,7 +922,7 @@ class _ImagesCardState extends State<_ImagesCard> {
             else
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [headerRow, uploadControl],
+                children: [Expanded(child: headerRow), uploadControl],
               ),
             const SizedBox(height: 24),
             const Divider(height: 1, color: Color(0xFFF0F0F0)),

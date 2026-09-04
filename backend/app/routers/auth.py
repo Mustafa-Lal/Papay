@@ -22,6 +22,7 @@ from app.models.access_key import AccessKey
 from app.models.role import Role
 from app.models.session import Session as AuthSession
 from app.schemas.access_key import ActivationRequest, MeResponse, TokenResponse
+from app.schemas.settings import VersionCheckResponse
 from app.services.authentication import authenticate_activation_key, create_session
 
 router = APIRouter(prefix="/auth")
@@ -115,3 +116,19 @@ def me_endpoint(
         access_key_id=current_access_key.id,
         role=role.name if role else "UNKNOWN",
     )
+
+# ---------------------------------------------------------
+# GET /auth/version-check — Check app version
+# ---------------------------------------------------------
+
+@router.get("/version-check", response_model=VersionCheckResponse)
+def version_check_endpoint(
+    version: str,
+    _: AccessKey = Depends(get_current_access_key),
+):
+    required_version = os.getenv("REQUIRED_APP_VERSION", "1.0.0")
+    if version == required_version:
+        return VersionCheckResponse(match=True)
+    return VersionCheckResponse(match=False, required_version=required_version)
+
+

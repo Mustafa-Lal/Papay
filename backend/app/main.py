@@ -25,6 +25,7 @@ app = FastAPI(
 
 app.include_router(auth.router, tags=["Auth"])
 app.include_router(admin.router, tags=["Admin"])
+app.include_router(admin.settings_router, tags=["Admin Settings"])
 app.include_router(product.router, tags=["Products"])
 app.include_router(insurance.router, tags=["Insurance"])
 app.include_router(mechanic.router, tags=["Mechanic"])

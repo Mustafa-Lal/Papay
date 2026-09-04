@@ -23,6 +23,10 @@ class RecordsService {
     await _apiClient.delete('${ApiEndpoints.products}/$id');
   }
 
+  Future<void> updateProduct(int id, Map<String, dynamic> data) async {
+    await _apiClient.put('${ApiEndpoints.products}/$id', body: data);
+  }
+
   // Rent
   Future<void> createRent(Map<String, dynamic> data) async {
     await _apiClient.post(ApiEndpoints.rent, body: data);
@@ -42,6 +46,10 @@ class RecordsService {
     await _apiClient.delete('${ApiEndpoints.rent}/$id');
   }
 
+  Future<void> updateRent(int id, Map<String, dynamic> data) async {
+    await _apiClient.put('${ApiEndpoints.rent}/$id', body: data);
+  }
+
   // Salary
   Future<void> createSalary(Map<String, dynamic> data) async {
     await _apiClient.post(ApiEndpoints.salaries, body: data);
@@ -57,6 +65,10 @@ class RecordsService {
 
   Future<void> deleteSalary(int id) async {
     await _apiClient.delete('${ApiEndpoints.salaries}/$id');
+  }
+
+  Future<void> updateSalary(int id, Map<String, dynamic> data) async {
+    await _apiClient.put('${ApiEndpoints.salaries}/$id', body: data);
   }
 
   // Utility Bills
@@ -76,6 +88,10 @@ class RecordsService {
     await _apiClient.delete('${ApiEndpoints.utilityBills}/$id');
   }
 
+  Future<void> updateUtilityBill(int id, Map<String, dynamic> data) async {
+    await _apiClient.put('${ApiEndpoints.utilityBills}/$id', body: data);
+  }
+
   // Profits
   Future<void> createProfit(Map<String, dynamic> data) async {
     await _apiClient.post(ApiEndpoints.profits, body: data);
@@ -93,6 +109,10 @@ class RecordsService {
     await _apiClient.delete('${ApiEndpoints.profits}/$id');
   }
 
+  Future<void> updateProfit(int id, Map<String, dynamic> data) async {
+    await _apiClient.put('${ApiEndpoints.profits}/$id', body: data);
+  }
+
   // Expenses
   Future<void> createExpense(Map<String, dynamic> data) async {
     await _apiClient.post(ApiEndpoints.expenses, body: data);
@@ -108,5 +128,9 @@ class RecordsService {
 
   Future<void> deleteExpense(int id) async {
     await _apiClient.delete('${ApiEndpoints.expenses}/$id');
+  }
+
+  Future<void> updateExpense(int id, Map<String, dynamic> data) async {
+    await _apiClient.put('${ApiEndpoints.expenses}/$id', body: data);
   }
 }

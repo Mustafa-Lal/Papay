@@ -74,6 +74,10 @@ class _LoginScreenState extends State<LoginScreen> {
     // On success, AuthState becomes 'authenticated' and go_router
     // automatically redirects to the correct dashboard — no message needed.
     if (mounted && !success) {
+      if (authState.status == AuthStatus.updateRequired) {
+        // Router will automatically redirect to /update screen
+        return;
+      }
       setState(() {
         _statusMessage = authState.errorMessage ?? 'This key isn\'t recognized. Double check it or contact your admin.';
         _isError = true;
@@ -87,7 +91,7 @@ class _LoginScreenState extends State<LoginScreen> {
     final isLoading = authState.status == AuthStatus.authenticating;
 
     return Scaffold(
-      backgroundColor: _bg,
+      backgroundColor: const Color(0xFFEEE9DF),
       body: Stack(
         children: [
           // Background Gradient

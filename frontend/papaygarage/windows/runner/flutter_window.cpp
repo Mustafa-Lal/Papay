@@ -1,5 +1,5 @@
 #include "flutter_window.h"
-
+#include <dwmapi.h>
 #include <optional>
 
 #include "flutter/generated_plugin_registrant.h"
@@ -13,6 +13,22 @@ bool FlutterWindow::OnCreate() {
   if (!Win32Window::OnCreate()) {
     return false;
   }
+
+  const COLORREF caption_color = RGB(238, 233, 223);
+
+  DwmSetWindowAttribute(
+      GetHandle(),
+      DWMWA_CAPTION_COLOR,
+      &caption_color,
+      sizeof(caption_color));
+
+  const COLORREF text_color = RGB(0, 0, 0);
+
+  DwmSetWindowAttribute(
+      GetHandle(),
+      DWMWA_TEXT_COLOR,
+      &text_color,
+      sizeof(text_color));
 
   RECT frame = GetClientArea();
 

@@ -1,6 +1,7 @@
 import 'package:go_router/go_router.dart';
 import '../core/auth/auth_state.dart';
 import '../features/auth/screens/login_screen.dart';
+import '../features/auth/screens/update_screen.dart';
 import '../features/admin/screens/admin_dashboard_screen.dart';
 import '../features/insurance/screens/insurance_dashboard_screen.dart';
 import '../features/mechanic/screens/mechanic_dashboard_screen.dart';
@@ -18,6 +19,11 @@ class AppRouter {
         // Wait until initialization finishes
         if (authStatus == AuthStatus.initial) {
           return null; // Let the splash/loading screen show
+        }
+
+        // Update required flow
+        if (authStatus == AuthStatus.updateRequired && state.matchedLocation != '/update') {
+          return '/update';
         }
 
         // Unauthenticated users must go to login
@@ -41,6 +47,10 @@ class AppRouter {
         GoRoute(
           path: '/login',
           builder: (context, state) => const LoginScreen(),
+        ),
+        GoRoute(
+          path: '/update',
+          builder: (context, state) => const UpdateScreen(),
         ),
         GoRoute(
           path: '/admin',

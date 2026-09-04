@@ -158,11 +158,19 @@ class ApiClient {
     return headers;
   }
 
-  /// Extracts the new token from the response headers if the session was renewed
+  /// Extracts the new token from the response headers if the session was renewed.
+  /// Also persists the updated expiry time when provided by the backend.
   Future<void> _handleSessionRefresh(http.Response response) async {
     final newToken = response.headers['x-session-token'];
     if (newToken != null && newToken.isNotEmpty) {
       await _tokenStorage.saveToken(newToken);
+      final expiresAtHeader = response.headers['x-session-expires-at'];
+      if (expiresAtHeader != null && expiresAtHeader.isNotEmpty) {
+        final expiresAt = DateTime.tryParse(expiresAtHeader);
+        if (expiresAt != null) {
+          await _tokenStorage.saveExpiresAt(expiresAt);
+        }
+      }
     }
   }
 

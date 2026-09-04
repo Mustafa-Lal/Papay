@@ -17,7 +17,6 @@ class Session(Base):
     access_key_id: Mapped[int] = mapped_column(
         ForeignKey("access_keys.id"),
         nullable=False,
-        unique=True,
     )
 
     token_hash: Mapped[str] = mapped_column(

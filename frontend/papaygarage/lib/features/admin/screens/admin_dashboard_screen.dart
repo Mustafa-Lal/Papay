@@ -4,6 +4,7 @@ import '../../../core/auth/auth_state.dart';
 import '../providers/admin_state.dart';
 import '../models/access_key_model.dart';
 import 'create_key_dialog.dart';
+import 'version_settings_dialog.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -34,55 +35,57 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF5F6F7),
-      body: Stack(
-        children: [
-          // Background Gradient
-          Positioned.fill(
-            child: DecoratedBox(
-              decoration: const BoxDecoration(
-                gradient: RadialGradient(
-                  center: Alignment.topCenter,
-                  radius: 1.2,
-                  colors: [
-                    Color.fromRGBO(180, 119, 10, 0.05),
-                    Colors.transparent,
-                  ],
-                  stops: [0.0, 0.55],
+    return SafeArea(
+      child: Scaffold(
+        backgroundColor: const Color(0xFFF5F6F7),
+        body: Stack(
+          children: [
+            // Background Gradient
+            Positioned.fill(
+              child: DecoratedBox(
+                decoration: const BoxDecoration(
+                  gradient: RadialGradient(
+                    center: Alignment.topCenter,
+                    radius: 1.2,
+                    colors: [
+                      Color.fromRGBO(180, 119, 10, 0.05),
+                      Colors.transparent,
+                    ],
+                    stops: [0.0, 0.55],
+                  ),
                 ),
               ),
             ),
-          ),
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final bool isMobile = constraints.maxWidth < _mobileBreakpoint;
-              return Center(
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(
-                    maxWidth: isMobile ? double.infinity : 760,
-                  ),
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: isMobile ? 12 : 20,
-                      vertical: isMobile ? 20 : 32,
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final bool isMobile = constraints.maxWidth < _mobileBreakpoint;
+                return Center(
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxWidth: isMobile ? double.infinity : 760,
                     ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        _buildTopbar(context, isMobile),
-                        SizedBox(height: isMobile ? 18 : 28),
-                        Expanded(
-                          child: _buildCard(context, isMobile),
-                        ),
-                      ],
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: isMobile ? 12 : 20,
+                        vertical: isMobile ? 20 : 32,
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          _buildTopbar(context, isMobile),
+                          SizedBox(height: isMobile ? 18 : 28),
+                          Expanded(
+                            child: _buildCard(context, isMobile),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                ),
-              );
-            },
-          ),
-        ],
+                );
+              },
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -136,6 +139,35 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               ),
             ],
           ),
+        ),
+        const SizedBox(width: 8),
+        OutlinedButton.icon(
+          onPressed: () {
+            showDialog(
+              context: context,
+              barrierColor: const Color.fromRGBO(20, 24, 28, 0.42),
+              builder: (_) => const VersionSettingsDialog(),
+            );
+          },
+          style: OutlinedButton.styleFrom(
+            backgroundColor: const Color(0xFFFFFFFF),
+            foregroundColor: const Color(0xFF1C2024),
+            side: const BorderSide(color: Color(0xFFE4E7EA)),
+            padding: EdgeInsets.symmetric(
+              horizontal: isMobile ? 12 : 16,
+              vertical: isMobile ? 14 : 20,
+            ),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(9),
+            ),
+            elevation: 0,
+            textStyle: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          icon: const Icon(Icons.settings, size: 15),
+          label: isMobile ? const SizedBox.shrink() : const Text('Settings'),
         ),
         const SizedBox(width: 8),
         OutlinedButton.icon(

@@ -135,4 +135,26 @@ class AdminState extends ChangeNotifier {
       notifyListeners();
     }
   }
+
+  Future<String> fetchRequiredVersion() async {
+    try {
+      return await _adminService.getRequiredVersion();
+    } catch (e) {
+      _setError('Failed to fetch required version.');
+      return '1.0.0';
+    }
+  }
+
+  Future<bool> updateRequiredVersion(String version) async {
+    _setLoading(true);
+    try {
+      await _adminService.updateRequiredVersion(version);
+      _setLoading(false);
+      return true;
+    } catch (e) {
+      _setError('Failed to update required version.');
+      _setLoading(false);
+      return false;
+    }
+  }
 }

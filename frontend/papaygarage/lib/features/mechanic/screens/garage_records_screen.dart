@@ -278,6 +278,185 @@ class _GarageRecordsScreenState extends State<GarageRecordsScreen>
     }
   }
 
+  Future<void> _edit(Map<String, dynamic> item) async {
+    final cat = _cat;
+    final id  = item['id'] as int;
+    final result = await _showEditDialog(cat, item);
+    if (result == null || !mounted) return;
+    final st = context.read<RecordsState>();
+    bool ok = false;
+    switch (cat.id) {
+      case 'products': ok = await st.updateProduct(id, result);     break;
+      case 'rent':     ok = await st.updateRent(id, result);        break;
+      case 'salary':   ok = await st.updateSalary(id, result);      break;
+      case 'utility':  ok = await st.updateUtilityBill(id, result); break;
+      case 'profit':   ok = await st.updateProfit(id, result);      break;
+      case 'expense':  ok = await st.updateExpense(id, result);     break;
+    }
+    if (!mounted) return;
+    _showToast(ok ? '${cat.label} updated!' : (st.errorMessage ?? 'Update failed'), success: ok);
+  }
+
+  Future<Map<String, dynamic>?> _showEditDialog(RecordCategory cat, Map<String, dynamic> item) async {
+    // Build controllers pre-filled from current item values
+    final controllers = <String, TextEditingController>{};
+    String? selectedBillType;
+    for (final col in cat.columns) {
+      final val = item[col.key]?.toString() ?? '';
+      if (col.type == 'select') {
+        selectedBillType = val.isNotEmpty ? val : (col.options?.first ?? 'ELECTRICITY');
+      } else {
+        controllers[col.key] = TextEditingController(text: val);
+      }
+    }
+
+    final result = await showDialog<Map<String, dynamic>>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDlg) {
+          return Dialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+            child: Container(
+              width: 400,
+              constraints: BoxConstraints(maxWidth: MediaQuery.sizeOf(ctx).width - 40),
+              padding: const EdgeInsets.all(28),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Header
+                  Row(
+                    children: [
+                      Container(
+                        width: 44, height: 44,
+                        decoration: BoxDecoration(color: _goldSoft, borderRadius: BorderRadius.circular(12)),
+                        child: Icon(Icons.edit_rounded, color: _gold, size: 20),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Edit ${cat.label}', style: GoogleFonts.oswald(fontSize: 18, fontWeight: FontWeight.w600, color: _ink, letterSpacing: 0.2)),
+                            Text('Update the fields below', style: GoogleFonts.inter(fontSize: 13, color: _muted)),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+                  // Fields
+                  ...cat.columns.map((col) => Padding(
+                    padding: const EdgeInsets.only(bottom: 16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(col.label.toUpperCase(), style: GoogleFonts.oswald(fontSize: 10.5, fontWeight: FontWeight.w600, letterSpacing: 0.9, color: _muted)),
+                        const SizedBox(height: 7),
+                        if (col.type == 'select') ...[  
+                          Container(
+                            height: 48,
+                            padding: const EdgeInsets.symmetric(horizontal: 14),
+                            decoration: BoxDecoration(
+                              color: _card,
+                              border: Border.all(color: _border, width: 1.5),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: DropdownButtonHideUnderline(
+                              child: DropdownButton<String>(
+                                value: selectedBillType,
+                                isExpanded: true,
+                                icon: const Icon(Icons.unfold_more_rounded, color: _muted, size: 18),
+                                dropdownColor: _card,
+                                style: GoogleFonts.inter(color: _ink, fontSize: 14, fontWeight: FontWeight.w600),
+                                items: (col.options ?? []).map((o) => DropdownMenuItem(value: o, child: Text(o))).toList(),
+                                onChanged: (v) { if (v != null) setDlg(() => selectedBillType = v); },
+                              ),
+                            ),
+                          ),
+                        ] else ...[  
+                          TextField(
+                            controller: controllers[col.key],
+                            keyboardType: col.type == 'number'
+                                ? const TextInputType.numberWithOptions(decimal: true)
+                                : TextInputType.text,
+                            style: GoogleFonts.inter(fontSize: 14, color: _ink, fontWeight: FontWeight.w500),
+                            decoration: InputDecoration(
+                              hintText: col.placeholder,
+                              hintStyle: GoogleFonts.inter(color: const Color(0xFFB8B0A4), fontSize: 14),
+                              filled: true,
+                              fillColor: _inputBg,
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                              enabledBorder: OutlineInputBorder(borderSide: const BorderSide(color: _border, width: 1.5), borderRadius: BorderRadius.circular(10)),
+                              focusedBorder: OutlineInputBorder(borderSide: const BorderSide(color: _gold, width: 1.8), borderRadius: BorderRadius.circular(10)),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  )),
+                  const SizedBox(height: 8),
+                  // Buttons
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () => Navigator.pop(ctx, null),
+                          style: OutlinedButton.styleFrom(
+                            side: const BorderSide(color: _border, width: 1.5),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            foregroundColor: _ink,
+                          ),
+                          child: Text('Cancel', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () {
+                            final payload = <String, dynamic>{};
+                            for (final col in cat.columns) {
+                              if (col.type == 'select') {
+                                payload[col.key] = selectedBillType;
+                              } else {
+                                final raw = controllers[col.key]?.text.trim() ?? '';
+                                if (col.type == 'number') {
+                                  payload[col.key] = double.tryParse(raw) ?? 0.0;
+                                } else {
+                                  payload[col.key] = raw;
+                                }
+                              }
+                            }
+                            Navigator.pop(ctx, payload);
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: _gold,
+                            foregroundColor: Colors.white,
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                          ),
+                          child: Text('Save changes', style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+
+    // Dispose controllers
+    for (final c in controllers.values) c.dispose();
+    return result;
+  }
+
   Future<void> _delete(int id) async {
     final confirmed = await _showDeleteDialog();
     if (!confirmed || !mounted) return;
@@ -738,6 +917,7 @@ class _GarageRecordsScreenState extends State<GarageRecordsScreen>
                 accentColor: Color(cat.color),
                 isProducts: isProducts,
                 onDelete: () => _delete(e.value['id']),
+                onEdit: () => _edit(e.value as Map<String, dynamic>),
                 isLast: e.key == list.length - 1,
               )),
             ],
@@ -1144,8 +1324,9 @@ class _SavedRow extends StatefulWidget {
   final Color accentColor;
   final bool isProducts;
   final VoidCallback onDelete;
+  final VoidCallback onEdit;
   final bool isLast;
-  const _SavedRow({required this.idx, required this.item, required this.catId, required this.accentColor, required this.isProducts, required this.onDelete, required this.isLast});
+  const _SavedRow({required this.idx, required this.item, required this.catId, required this.accentColor, required this.isProducts, required this.onDelete, required this.onEdit, required this.isLast});
 
   @override
   State<_SavedRow> createState() => _SavedRowState();
@@ -1205,6 +1386,21 @@ class _SavedRowState extends State<_SavedRow> {
     );
   }
 
+  Widget _editButton({required double opacity}) {
+    return AnimatedOpacity(
+      opacity: opacity,
+      duration: const Duration(milliseconds: 130),
+      child: IconButton(
+        icon: const Icon(Icons.edit_outlined, size: 17),
+        color: _goldDark,
+        onPressed: widget.onEdit,
+        padding: EdgeInsets.zero,
+        constraints: const BoxConstraints(),
+        splashRadius: 18,
+      ),
+    );
+  }
+
   Widget _deleteButton({required double opacity}) {
     return AnimatedOpacity(
       opacity: opacity,
@@ -1250,6 +1446,8 @@ class _SavedRowState extends State<_SavedRow> {
             ],
           ),
         ),
+        _editButton(opacity: 1),
+        const SizedBox(width: 2),
         _deleteButton(opacity: 1),
       ],
     );
@@ -1290,6 +1488,8 @@ class _SavedRowState extends State<_SavedRow> {
           ),
         ],
         const SizedBox(width: 4),
+        SizedBox(width: 32, child: _editButton(opacity: _hovered ? 1.0 : 0.3)),
+        const SizedBox(width: 2),
         SizedBox(width: 32, child: _deleteButton(opacity: _hovered ? 1.0 : 0.4)),
       ],
     );

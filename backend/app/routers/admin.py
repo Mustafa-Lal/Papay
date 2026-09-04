@@ -16,6 +16,8 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from dotenv import set_key
+from pathlib import Path
 from app.dependencies.auth import get_db, require_admin
 from app.models.access_key import AccessKey
 from app.models.role import Role
@@ -24,6 +26,7 @@ from app.schemas.access_key import (
     AccessKeyCreateResponse,
     AccessKeyResponse,
 )
+from app.schemas.settings import VersionSettingsUpdate
 from app.services.key_activation import (
     activate_access_key_by_id,
     deactivate_access_key_by_id,
@@ -31,6 +34,7 @@ from app.services.key_activation import (
 from app.services.key_creation import create_access_key
 
 router = APIRouter(prefix="/admin/access-keys")
+settings_router = APIRouter(prefix="/admin/settings")
 
 
 def _get_secret() -> str:
@@ -179,10 +183,6 @@ def delete_key_endpoint(
     db: Session = Depends(get_db),
     _: AccessKey = Depends(require_admin),
 ):
-    # Prevent the admin from deleting themselves (e.g. role_id 4)
-    # But since there might be multiple admins, maybe just prevent deleting the key_id making the request?
-    # For now, let's just delete the key.
-    
     success = delete_access_key_by_id(db=db, key_id=key_id)
 
     if not success:
@@ -199,3 +199,26 @@ def delete_key_endpoint(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to delete access key.",
         )
+
+# ---------------------------------------------------------
+# Settings (App Version) -> /admin/settings/version
+# ---------------------------------------------------------
+
+@settings_router.get("/version", response_model=VersionSettingsUpdate)
+def get_version_settings(
+    _: AccessKey = Depends(require_admin),
+):
+    version = os.getenv("REQUIRED_APP_VERSION", "1.0.0")
+    return VersionSettingsUpdate(version=version)
+
+
+@settings_router.post("/version", response_model=VersionSettingsUpdate)
+def update_version_settings(
+    payload: VersionSettingsUpdate,
+    _: AccessKey = Depends(require_admin),
+):
+    env_path = Path(__file__).parent.parent.parent / ".env"
+    set_key(str(env_path), "REQUIRED_APP_VERSION", payload.version)
+    os.environ["REQUIRED_APP_VERSION"] = payload.version
+    return payload
+

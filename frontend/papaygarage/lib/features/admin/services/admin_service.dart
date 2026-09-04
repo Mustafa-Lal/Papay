@@ -35,4 +35,16 @@ class AdminService {
   Future<void> deleteKey(int keyId) async {
     await _apiClient.delete('${ApiEndpoints.adminAccessKeys}/$keyId');
   }
+
+  Future<String> getRequiredVersion() async {
+    final response = await _apiClient.get(ApiEndpoints.adminSettingsVersion);
+    return response['version'];
+  }
+
+  Future<void> updateRequiredVersion(String version) async {
+    await _apiClient.post(
+      ApiEndpoints.adminSettingsVersion,
+      body: {'version': version},
+    );
+  }
 }

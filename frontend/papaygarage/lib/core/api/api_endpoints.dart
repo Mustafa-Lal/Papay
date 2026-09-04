@@ -1,15 +1,17 @@
 class ApiEndpoints {
   // Use localhost for Windows desktop / Web. 
   // If running on Android emulator, this should be http://10.0.2.2:8000
-  static const String baseUrl = 'https://papaygarage.duckdns.org';
+  static const String baseUrl = 'http://localhost:5000';
 
   // Auth
   static const String activate = '/auth/activate';
   static const String logout = '/auth/logout';
   static const String me = '/auth/me';
+  static const String versionCheck = '/auth/version-check';
 
   // Admin
   static const String adminAccessKeys = '/admin/access-keys';
+  static const String adminSettingsVersion = '/admin/settings/version';
 
   // Insurance
   static const String insuranceInvoices = '/insurance/invoices';

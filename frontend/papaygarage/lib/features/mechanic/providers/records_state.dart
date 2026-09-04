@@ -491,4 +491,120 @@ class RecordsState extends ChangeNotifier {
       _setError(e.toString());
     }
   }
+
+  // --- Update Methods (Optimistic UI) ---
+
+  Future<bool> updateProduct(int id, Map<String, dynamic> data) async {
+    final backup = List<dynamic>.from(_products);
+    final idx = _products.indexWhere((e) => e['id'] == id);
+    if (idx != -1) {
+      final updated = Map<String, dynamic>.from(_products[idx] as Map<String, dynamic>)..addAll(data);
+      _products[idx] = updated;
+      notifyListeners();
+    }
+    try {
+      await _recordsService.updateProduct(id, data);
+      return true;
+    } catch (e) {
+      _products = backup;
+      _setError(e.toString());
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> updateRent(int id, Map<String, dynamic> data) async {
+    final backup = List<dynamic>.from(_rents);
+    final idx = _rents.indexWhere((e) => e['id'] == id);
+    if (idx != -1) {
+      final updated = Map<String, dynamic>.from(_rents[idx] as Map<String, dynamic>)..addAll(data);
+      _rents[idx] = updated;
+      notifyListeners();
+    }
+    try {
+      await _recordsService.updateRent(id, data);
+      return true;
+    } catch (e) {
+      _rents = backup;
+      _setError(e.toString());
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> updateSalary(int id, Map<String, dynamic> data) async {
+    final backup = List<dynamic>.from(_salaries);
+    final idx = _salaries.indexWhere((e) => e['id'] == id);
+    if (idx != -1) {
+      final updated = Map<String, dynamic>.from(_salaries[idx] as Map<String, dynamic>)..addAll(data);
+      _salaries[idx] = updated;
+      notifyListeners();
+    }
+    try {
+      await _recordsService.updateSalary(id, data);
+      return true;
+    } catch (e) {
+      _salaries = backup;
+      _setError(e.toString());
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> updateUtilityBill(int id, Map<String, dynamic> data) async {
+    final backup = List<dynamic>.from(_utilityBills);
+    final idx = _utilityBills.indexWhere((e) => e['id'] == id);
+    if (idx != -1) {
+      final updated = Map<String, dynamic>.from(_utilityBills[idx] as Map<String, dynamic>)..addAll(data);
+      _utilityBills[idx] = updated;
+      notifyListeners();
+    }
+    try {
+      await _recordsService.updateUtilityBill(id, data);
+      return true;
+    } catch (e) {
+      _utilityBills = backup;
+      _setError(e.toString());
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> updateProfit(int id, Map<String, dynamic> data) async {
+    final backup = List<dynamic>.from(_profits);
+    final idx = _profits.indexWhere((e) => e['id'] == id);
+    if (idx != -1) {
+      final updated = Map<String, dynamic>.from(_profits[idx] as Map<String, dynamic>)..addAll(data);
+      _profits[idx] = updated;
+      notifyListeners();
+    }
+    try {
+      await _recordsService.updateProfit(id, data);
+      return true;
+    } catch (e) {
+      _profits = backup;
+      _setError(e.toString());
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> updateExpense(int id, Map<String, dynamic> data) async {
+    final backup = List<dynamic>.from(_expenses);
+    final idx = _expenses.indexWhere((e) => e['id'] == id);
+    if (idx != -1) {
+      final updated = Map<String, dynamic>.from(_expenses[idx] as Map<String, dynamic>)..addAll(data);
+      _expenses[idx] = updated;
+      notifyListeners();
+    }
+    try {
+      await _recordsService.updateExpense(id, data);
+      return true;
+    } catch (e) {
+      _expenses = backup;
+      _setError(e.toString());
+      notifyListeners();
+      return false;
+    }
+  }
 }

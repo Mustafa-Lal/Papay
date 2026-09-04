@@ -9,6 +9,10 @@ const _gold = PdfColor.fromInt(0xFFC49F38);
 const _indigo = PdfColor.fromInt(0xFF3F51B5);
 const _headerBg = PdfColor.fromInt(0xFFF0EDE6); // very light warm grey header
 
+// New colors requested
+const _blue = PdfColor.fromInt(0xFF1E4FCC); // used for info/meta text
+const _red = PdfColor.fromInt(0xFFD32F2F); // used for brand name + charges + total
+
 /// Generates and prints a Papay Garage insurance invoice PDF.
 Future<void> printInsuranceInvoice(
   BuildContext context,
@@ -16,6 +20,11 @@ Future<void> printInsuranceInvoice(
 ) async {
   final arabicFont = await PdfGoogleFonts.cairoRegular();
   final arabicFontBold = await PdfGoogleFonts.cairoBold();
+  // Cairo's font subset (as fetched via PdfGoogleFonts) doesn't include a
+  // glyph for the isolated-Yeh presentation-form codepoint (U+FEF1).
+  // Amiri has full legacy Arabic Presentation-Forms coverage, so it's used
+  // as a fallback ONLY for that one character.
+  final arabicFallbackBold = await PdfGoogleFonts.amiriBold();
 
   final pdf = pw.Document();
   final invoiceNumber =
@@ -29,7 +38,7 @@ Future<void> printInsuranceInvoice(
       build: (pw.Context ctx) => pw.Column(
         crossAxisAlignment: pw.CrossAxisAlignment.start,
         children: [
-          _header(arabicFont, arabicFontBold),
+          _header(arabicFont, arabicFontBold, arabicFallbackBold),
           pw.SizedBox(height: 12),
           pw.Divider(thickness: 1.5, color: PdfColors.black),
           pw.SizedBox(height: 10),
@@ -74,12 +83,13 @@ pw.Widget _ar(
 // ── Header ────────────────────────────────────────────────────────────────────
 // Every line is constrained to the same fixed height so both columns
 // have identical total heights regardless of font metrics.
-pw.Widget _header(pw.Font arFont, pw.Font arBold) {
+// Title (Papay Garage / كراج باباي) is RED. All other info lines are BLUE.
+pw.Widget _header(pw.Font arFont, pw.Font arBold, pw.Font arFallbackBold) {
   const titleH = 17.0;  // height for bold title line
   const lineH  = 11.0;  // height for each info line
 
-  const enBoldStyle  = pw.TextStyle(fontSize: 13, fontWeight: pw.FontWeight.bold);
-  const enSmallStyle = pw.TextStyle(fontSize: 8,  color: PdfColors.grey700);
+  final enBoldStyle  = pw.TextStyle(fontSize: 13, fontWeight: pw.FontWeight.bold, color: _red);
+  final enSmallStyle = pw.TextStyle(fontSize: 8,  color: _blue);
 
   pw.Widget enLine(String t, {bool bold = false}) => pw.SizedBox(
         height: bold ? titleH : lineH,
@@ -99,7 +109,7 @@ pw.Widget _header(pw.Font arFont, pw.Font arBold) {
             style: pw.TextStyle(
               font: bold ? arBold : arFont,
               fontSize: bold ? 13 : 8,
-              color: bold ? PdfColors.black : PdfColors.grey700,
+              color: bold ? _red : _blue,
             ),
           ),
         ),
@@ -120,7 +130,37 @@ pw.Widget _header(pw.Font arFont, pw.Font arBold) {
         enLine('Doha - Qatar'),
       ]),
       pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.end, children: [
-        arLine('كراج باباي', bold: true),
+        // Split into separate runs, AND use the explicit isolated-form
+        // presentation glyph for ي (U+FEF1) instead of the plain letter
+        // (U+064A). The plain letter goes through dart_pdf's automatic
+        // Arabic contextual-shaping/bidi-reordering step, which has the
+        // bug that drops it. The presentation-form codepoint is already
+        // a final glyph, so it bypasses that step and renders directly.
+        pw.SizedBox(
+          height: titleH,
+          child: pw.Align(
+            alignment: pw.Alignment.centerRight,
+            child: pw.Row(
+              mainAxisSize: pw.MainAxisSize.min,
+              children: [
+                pw.Text('با\uFEF1', // با + explicit isolated Yeh glyph
+                    textDirection: pw.TextDirection.rtl,
+                    style: pw.TextStyle(
+                      font: arBold,
+                      fontFallback: [arFallbackBold],
+                      fontSize: 13,
+                      color: _red,
+                    )),
+                pw.Text('با',
+                    textDirection: pw.TextDirection.rtl,
+                    style: pw.TextStyle(font: arBold, fontSize: 13, color: _red)),
+                pw.Text('كراج ',
+                    textDirection: pw.TextDirection.rtl,
+                    style: pw.TextStyle(font: arBold, fontSize: 13, color: _red)),
+              ],
+            ),
+          ),
+        ),
         arLine('جوال: 77001732'),
         arLine('تليفون: 70060019'),
         arLine('ص.ب: 40701'),
@@ -135,6 +175,7 @@ pw.Widget _header(pw.Font arFont, pw.Font arBold) {
 
 
 // ── Invoice Meta ──────────────────────────────────────────────────────────────
+// All text in this block is now BLUE.
 pw.Widget _invoiceMeta(
   String dateStr,
   String invoiceNumber,
@@ -143,9 +184,9 @@ pw.Widget _invoiceMeta(
   pw.Font arBold,
 ) {
   final customer = invoice.customer;
-  const enSmall = pw.TextStyle(fontSize: 9, color: PdfColors.grey600);
-  const enBold10 = pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold);
-  const titleStyle = pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold, letterSpacing: 2);
+  const enSmall = pw.TextStyle(fontSize: 9, color: _blue);
+  const enBold10 = pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold, color: _blue);
+  const titleStyle = pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold, letterSpacing: 2, color: _blue);
 
   return pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
     pw.Row(
@@ -156,14 +197,14 @@ pw.Widget _invoiceMeta(
           pw.Text('Date: ', style: enSmall),
           pw.Text(dateStr, style: enBold10),
         ]),
-        _ar('فاتورة', arFont, size: 14, bold: true, boldFont: arBold),
+        _ar('فاتورة', arFont, size: 14, bold: true, boldFont: arBold, color: _blue),
       ],
     ),
     pw.SizedBox(height: 8),
     pw.Row(children: [
       pw.Text('No: ', style: enSmall),
       pw.Text(invoiceNumber,
-          style: const pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold, color: _indigo)),
+          style: const pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold, color: _blue)),
     ]),
     pw.SizedBox(height: 5),
     pw.Text('MR. / MESSERS', style: enSmall),
@@ -239,23 +280,23 @@ pw.Widget _itemsTable(InsuranceInvoice invoice, pw.Font arFont, pw.Font arBold) 
     ]));
   }
 
-  // Papay Charges row
+  // Papay Charges row — now RED (was gold/grey)
   itemRows.add(pw.TableRow(children: [
     cell('-'),
     pw.Padding(
       padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 9),
       child: pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
         pw.Text('Papay Charges',
-            style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold, color: _gold)),
+            style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold, color: _red)),
         pw.SizedBox(height: 1),
         pw.Text('رسوم باباي',
             textDirection: pw.TextDirection.rtl,
-            style: pw.TextStyle(font: arFont, fontSize: 7, color: PdfColors.grey600)),
+            style: pw.TextStyle(font: arFont, fontSize: 7, color: _red)),
       ]),
     ),
     pw.SizedBox(),
     pw.SizedBox(),
-    cell(invoice.laborCharges.toStringAsFixed(2), bold: true, align: pw.TextAlign.right),
+    cell(invoice.laborCharges.toStringAsFixed(2), bold: true, align: pw.TextAlign.right, color: _red),
   ]));
 
   final columnWidths = {
@@ -300,7 +341,7 @@ pw.Widget _itemsTable(InsuranceInvoice invoice, pw.Font arFont, pw.Font arBold) 
           child: pw.Text(
             'QR ${invoice.grandTotal.toStringAsFixed(2)}',
             textAlign: pw.TextAlign.right,
-            style: const pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold, color: _gold),
+            style: const pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold, color: _red),
           ),
         ),
       ],
