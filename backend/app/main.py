@@ -1,3 +1,4 @@
+import os
 from dotenv import load_dotenv
 from fastapi import FastAPI
 
@@ -17,9 +18,13 @@ from app.routers import (
     utility_bill,
 )
 
+ENVIRONMENT = os.getenv("ENVIRONMENT", "production") # Default to production for security
 
 app = FastAPI(
     title="Papay Garage API",
+    docs_url=None if ENVIRONMENT == "production" else "/docs",
+    redoc_url=None if ENVIRONMENT == "production" else "/redoc",
+    openapi_url=None if ENVIRONMENT == "production" else "/openapi.json",
 )
 
 

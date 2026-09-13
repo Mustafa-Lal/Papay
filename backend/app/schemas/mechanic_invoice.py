@@ -202,6 +202,11 @@ class MechanicInvoiceCreate(BaseModel):
         max_length=50,
     )
 
+    description: str | None = Field(
+        default=None,
+        max_length=1000,
+    )
+
     labor_charges: Decimal = Field(
         default=Decimal("0.00"),
         ge=0,
@@ -242,6 +247,11 @@ class MechanicInvoiceUpdate(BaseModel):
         default=None,
         min_length=1,
         max_length=50,
+    )
+
+    description: str | None = Field(
+        default=None,
+        max_length=1000,
     )
 
     labor_charges: Decimal | None = Field(
@@ -316,6 +326,7 @@ class MechanicInvoiceResponse(BaseModel):
     id: int
     customer_id: int
     plate_number: str
+    description: str | None
     labor_charges: Decimal
     payment_status: PaymentStatus
     created_by: int

@@ -5,6 +5,7 @@ import '../../../core/auth/auth_state.dart';
 import '../models/insurance_models.dart';
 import 'create_invoice_screen.dart';
 import 'invoice_detail_screen.dart';
+import 'insurance_records_screen.dart';
 import '../../../core/widgets/plate_search_bar.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -37,7 +38,7 @@ const double _cardPadding = 24;
 // ──────────────────────────────────────────────
 // Responsive tokens
 // ──────────────────────────────────────────────
-const double _mobileBreakpoint = 800.0;
+const double _mobileBreakpoint = 860.0;
 const double _cardPaddingMobile = 16;
 
 
@@ -218,6 +219,18 @@ class _InsuranceDashboardScreenState extends State<InsuranceDashboardScreen> {
       ],
     );
 
+    final recordsButton = _topbarGhostButton(
+      icon: Icons.bar_chart,
+      label: 'Insurance Records',
+      onPressed: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const InsuranceRecordsScreen()),
+        );
+      },
+      isMobile: isMobile,
+    );
+
     final logoutButton = _topbarGhostButton(
       icon: Icons.logout,
       label: 'Log out',
@@ -226,7 +239,7 @@ class _InsuranceDashboardScreenState extends State<InsuranceDashboardScreen> {
     );
 
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: isMobile ? 16 : 28, vertical: isMobile ? 16 : 22),
+      padding: EdgeInsets.symmetric(horizontal: isMobile ? 16 : 24, vertical: isMobile ? 14 : 16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(_radius),
@@ -241,14 +254,27 @@ class _InsuranceDashboardScreenState extends State<InsuranceDashboardScreen> {
               children: [
                 brandRow,
                 const SizedBox(height: 14),
-                SizedBox(width: double.infinity, child: logoutButton),
+                Row(
+                  children: [
+                    Expanded(child: recordsButton),
+                    const SizedBox(width: 10),
+                    Expanded(child: logoutButton),
+                  ],
+                ),
               ],
             )
           : Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Expanded(child: brandRow),
-                logoutButton,
+                const SizedBox(width: 16),
+                Row(
+                  children: [
+                    recordsButton,
+                    const SizedBox(width: 10),
+                    logoutButton,
+                  ],
+                ),
               ],
             ),
     );
@@ -263,14 +289,14 @@ class _InsuranceDashboardScreenState extends State<InsuranceDashboardScreen> {
     return OutlinedButton.icon(
       onPressed: onPressed,
       icon: Icon(icon, size: 16, color: _accent),
-      label: Text(label, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: _accent)),
+      label: Text(label, style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600, color: _accent)),
       style: OutlinedButton.styleFrom(
         foregroundColor: const Color(0xFFE5E7EB),
         backgroundColor: _accent,
         side: const BorderSide(color: _accentDark),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-        padding: EdgeInsets.symmetric(horizontal: 16, vertical: isMobile ? 14 : 20),
-        textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+        padding: EdgeInsets.symmetric(horizontal: 14, vertical: isMobile ? 12 : 14),
+        textStyle: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600),
       ).copyWith(
         backgroundColor: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.hovered)) return const Color(0xFF2A2A28);
@@ -291,27 +317,31 @@ class _InsuranceDashboardScreenState extends State<InsuranceDashboardScreen> {
         const SizedBox(height: 4),
         const Text(
           'View, edit and manage all insurance records',
-          style: TextStyle(fontSize: 14, color: _muted),
+          style: TextStyle(fontSize: 13.5, color: _muted),
         ),
       ],
     );
 
     final durationButton = SizedBox(
-      height: 45,
+      height: 42,
       width: isMobile ? double.infinity : null,
       child: OutlinedButton.icon(
         onPressed: _pickDateRange,
         icon: const Icon(Icons.calendar_today_outlined, size: 16, color: _accent),
-        label: Text(_selectedDateRange == null
-            ? 'Duration'
-            : '${DateFormat('MMM d').format(_selectedDateRange!.start)} - ${DateFormat('MMM d').format(_selectedDateRange!.end)}', style: const TextStyle(color: _accent)),
+        label: Text(
+          _selectedDateRange == null
+              ? 'Duration'
+              : '${DateFormat('MMM d').format(_selectedDateRange!.start)} - ${DateFormat('MMM d').format(_selectedDateRange!.end)}',
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(color: _accent),
+        ),
         style: OutlinedButton.styleFrom(
           foregroundColor: _ink,
           backgroundColor: const Color.fromARGB(93, 184, 134, 58),
           side: const BorderSide(color: _accent),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          textStyle: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600),
         ).copyWith(
           side: WidgetStateProperty.resolveWith((states) {
             if (states.contains(WidgetState.hovered)) return const BorderSide(color: _muted2);
@@ -322,7 +352,7 @@ class _InsuranceDashboardScreenState extends State<InsuranceDashboardScreen> {
     );
 
     final newInvoiceButton = SizedBox(
-      height: 45,
+      height: 42,
       width: isMobile ? double.infinity : null,
       child: ElevatedButton.icon(
         onPressed: _goToCreate,
@@ -333,7 +363,8 @@ class _InsuranceDashboardScreenState extends State<InsuranceDashboardScreen> {
           backgroundColor: _accent,
           elevation: 0,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-          textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          textStyle: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600),
         ).copyWith(
           backgroundColor: WidgetStateProperty.resolveWith((states) {
             if (states.contains(WidgetState.hovered)) return _accentDark;
@@ -375,18 +406,18 @@ class _InsuranceDashboardScreenState extends State<InsuranceDashboardScreen> {
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Expanded(child: titleBlock),
-        const SizedBox(width: 20),
-        _buildSearchBar(220),
-        const SizedBox(width: 10),
+        const SizedBox(width: 14),
+        _buildSearchBar(200),
+        const SizedBox(width: 8),
         durationButton,
         if (_selectedDateRange != null) ...[
-          const SizedBox(width: 6),
+          const SizedBox(width: 4),
           IconButton(
             icon: const Icon(Icons.clear, color: _muted),
             onPressed: _clearSearch,
           ),
         ],
-        const SizedBox(width: 10),
+        const SizedBox(width: 8),
         newInvoiceButton,
       ],
     );
@@ -410,40 +441,12 @@ class _InsuranceDashboardScreenState extends State<InsuranceDashboardScreen> {
             horizontal: isMobile ? _cardPaddingMobile : _cardPadding,
             vertical: 14,
           ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Showing $count ${count == 1 ? 'invoice' : 'invoices'}',
-                style: const TextStyle(fontSize: 13, color: _muted),
-              ),
-              Row(
-                children: [
-                  _pageButton(Icons.chevron_left, enabled: state.canGoPrev, onTap: state.previousPage),
-                  const SizedBox(width: 8),
-                  _pageButton(Icons.chevron_right, enabled: state.canGoNext, onTap: state.nextPage),
-                ],
-              ),
-            ],
+          child: Text(
+            'Showing $count ${count == 1 ? 'invoice' : 'invoices'}',
+            style: const TextStyle(fontSize: 13, color: _muted),
           ),
         );
       },
-    );
-  }
-
-  Widget _pageButton(IconData icon, {required bool enabled, VoidCallback? onTap}) {
-    return GestureDetector(
-      onTap: enabled ? onTap : null,
-      child: Container(
-        width: 34,
-        height: 34,
-        decoration: BoxDecoration(
-          color: _surface,
-          border: Border.all(color: _border),
-          borderRadius: BorderRadius.circular(7),
-        ),
-        child: Icon(icon, size: 16, color: enabled ? _ink : _muted2.withValues(alpha: 0.5)),
-      ),
     );
   }
 

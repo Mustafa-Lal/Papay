@@ -50,11 +50,13 @@ class MechanicService {
     required String? phoneNumber,
     required String? qid,
     required List<Map<String, dynamic>> items,
+    String? description,
   }) async {
     final body = {
       'plate_number': plateNumber,
       'labor_charges': laborCharges,
       'payment_status': paymentStatus,
+      if (description != null && description.isNotEmpty) 'description': description,
       'customer': {
         'customer_name': customerName,
         'phone_number': phoneNumber,

@@ -71,6 +71,7 @@ class _EditInvoiceScreenState extends State<EditInvoiceScreen> {
   final _formKey = GlobalKey<FormState>();
 
   final _plateController = TextEditingController();
+  final _descriptionController = TextEditingController();
   final _laborController = TextEditingController();
   String _paymentStatus = 'UNPAID';
 
@@ -85,6 +86,7 @@ class _EditInvoiceScreenState extends State<EditInvoiceScreen> {
   void initState() {
     super.initState();
     _plateController.text = widget.invoice.plateNumber;
+    _descriptionController.text = widget.invoice.description ?? '';
     _laborController.text = widget.invoice.laborCharges == 0 ? '' : widget.invoice.laborCharges.toStringAsFixed(2);
     _paymentStatus = paymentStatusLabel(widget.invoice.paymentStatus);
     
@@ -110,6 +112,7 @@ class _EditInvoiceScreenState extends State<EditInvoiceScreen> {
   @override
   void dispose() {
     _plateController.dispose();
+    _descriptionController.dispose();
     _laborController.dispose();
     _customerNameController.dispose();
     _phoneController.dispose();
@@ -148,13 +151,17 @@ class _EditInvoiceScreenState extends State<EditInvoiceScreen> {
 
     // Invoice
     final labor = double.tryParse(_laborController.text) ?? 0;
+    final newDesc = _descriptionController.text.trim();
+    final oldDesc = widget.invoice.description?.trim() ?? '';
     if (_plateController.text.trim() != widget.invoice.plateNumber ||
         labor != widget.invoice.laborCharges ||
-        _paymentStatus != paymentStatusLabel(widget.invoice.paymentStatus)) {
+        _paymentStatus != paymentStatusLabel(widget.invoice.paymentStatus) ||
+        newDesc != oldDesc) {
       await state.updateInvoice(widget.invoice.id, {
         'plate_number': _plateController.text.trim(),
         'labor_charges': labor,
         'payment_status': _paymentStatus,
+        'description': newDesc.isEmpty ? '' : newDesc,
       });
       changed = true;
     }
@@ -230,14 +237,16 @@ class _EditInvoiceScreenState extends State<EditInvoiceScreen> {
                 children: [
                   _TopBar(isLoading: isLoading, onSave: _submit, isMobile: isMobile),
                   Expanded(
-                    child: SingleChildScrollView(
-                      padding: EdgeInsets.fromLTRB(
-                        isMobile ? 16 : 24,
-                        isMobile ? 16 : 20,
-                        isMobile ? 16 : 24,
-                        isMobile ? 28 : 40,
-                      ),
-                      child: Column(
+                    child: ScrollConfiguration(
+                      behavior: ScrollConfiguration.of(context).copyWith(scrollbars: false),
+                      child: SingleChildScrollView(
+                        padding: EdgeInsets.fromLTRB(
+                          isMobile ? 16 : 24,
+                          isMobile ? 16 : 20,
+                          isMobile ? 16 : 24,
+                          isMobile ? 28 : 40,
+                        ),
+                        child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           _SectionCard(
@@ -267,8 +276,9 @@ class _EditInvoiceScreenState extends State<EditInvoiceScreen> {
                       ),
                     ),
                   ),
-                ],
-              );
+                ),
+              ],
+            );
             },
           ),
         ),
@@ -402,26 +412,49 @@ class _EditInvoiceScreenState extends State<EditInvoiceScreen> {
       ],
     );
 
+    final descriptionField = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const _FieldLabel(label: 'Description', hint: '(optional)'),
+        const SizedBox(height: 6),
+        _GoldInput(
+          controller: _descriptionController,
+          hint: 'e.g. Full service, brake pads replacement…',
+          prefixIcon: Icons.notes_outlined,
+        ),
+      ],
+    );
+
     if (isMobile) {
       return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           plateField,
           const SizedBox(height: 18),
           laborField,
           const SizedBox(height: 18),
           statusField,
+          const SizedBox(height: 18),
+          descriptionField,
         ],
       );
     }
 
-    return Row(
+    return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Expanded(child: plateField),
-        const SizedBox(width: 16),
-        Expanded(child: laborField),
-        const SizedBox(width: 16),
-        Expanded(child: statusField),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(child: plateField),
+            const SizedBox(width: 16),
+            Expanded(child: laborField),
+            const SizedBox(width: 16),
+            Expanded(child: statusField),
+          ],
+        ),
+        const SizedBox(height: 18),
+        descriptionField,
       ],
     );
   }

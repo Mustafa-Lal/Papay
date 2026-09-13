@@ -97,6 +97,7 @@ String paymentStatusLabel(PaymentStatus status) {
 class MechanicInvoice {
   final int id;
   final String plateNumber;
+  final String? description;
   final double laborCharges;
   final PaymentStatus paymentStatus;
   final DateTime invoiceDate;
@@ -107,6 +108,7 @@ class MechanicInvoice {
   MechanicInvoice({
     required this.id,
     required this.plateNumber,
+    this.description,
     required this.laborCharges,
     required this.paymentStatus,
     required this.invoiceDate,
@@ -119,6 +121,7 @@ class MechanicInvoice {
     return MechanicInvoice(
       id: json['id'],
       plateNumber: json['plate_number'],
+      description: json['description'] as String?,
       laborCharges: double.parse(json['labor_charges'].toString()),
       paymentStatus: parsePaymentStatus(json['payment_status']),
       invoiceDate: DateTime.parse(json['created_at'] ?? json['invoice_date']),
@@ -134,6 +137,7 @@ class MechanicInvoice {
   MechanicInvoice copyWith({
     int? id,
     String? plateNumber,
+    String? description,
     double? laborCharges,
     PaymentStatus? paymentStatus,
     DateTime? invoiceDate,
@@ -144,6 +148,7 @@ class MechanicInvoice {
     return MechanicInvoice(
       id: id ?? this.id,
       plateNumber: plateNumber ?? this.plateNumber,
+      description: description ?? this.description,
       laborCharges: laborCharges ?? this.laborCharges,
       paymentStatus: paymentStatus ?? this.paymentStatus,
       invoiceDate: invoiceDate ?? this.invoiceDate,

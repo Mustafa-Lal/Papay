@@ -9,6 +9,8 @@ import '../features/admin/services/admin_service.dart';
 import '../features/admin/providers/admin_state.dart';
 import '../features/insurance/services/insurance_service.dart';
 import '../features/insurance/providers/insurance_state.dart';
+import '../features/insurance/services/insurance_records_service.dart';
+import '../features/insurance/providers/insurance_records_state.dart';
 import '../features/mechanic/services/mechanic_service.dart';
 import '../features/mechanic/providers/mechanic_state.dart';
 import '../features/mechanic/services/records_service.dart';
@@ -35,6 +37,9 @@ class _PapayGarageAppState extends State<PapayGarageApp> {
 
   late final InsuranceService _insuranceService;
   late final InsuranceState _insuranceState;
+
+  late final InsuranceRecordsService _insuranceRecordsService;
+  late final InsuranceRecordsState _insuranceRecordsState;
 
   late final MechanicService _mechanicService;
   late final MechanicState _mechanicState;
@@ -67,6 +72,9 @@ class _PapayGarageAppState extends State<PapayGarageApp> {
     _insuranceService = InsuranceService(apiClient: _apiClient);
     _insuranceState = InsuranceState(service: _insuranceService);
 
+    _insuranceRecordsService = InsuranceRecordsService(apiClient: _apiClient);
+    _insuranceRecordsState = InsuranceRecordsState(service: _insuranceRecordsService);
+
     // Initialize Mechanic services
     _mechanicService = MechanicService(apiClient: _apiClient);
     _mechanicState = MechanicState(service: _mechanicService);
@@ -90,6 +98,7 @@ class _PapayGarageAppState extends State<PapayGarageApp> {
         ChangeNotifierProvider.value(value: _authState),
         ChangeNotifierProvider.value(value: _adminState),
         ChangeNotifierProvider.value(value: _insuranceState),
+        ChangeNotifierProvider.value(value: _insuranceRecordsState),
         ChangeNotifierProvider.value(value: _mechanicState),
         ChangeNotifierProvider.value(value: _recordsState),
         ChangeNotifierProvider.value(value: _ownerState),

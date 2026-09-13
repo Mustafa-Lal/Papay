@@ -86,6 +86,7 @@ def get_mechanic_customer_details(
             {
                 "id": invoice.id,
                 "plate_number": invoice.plate_number,
+                "description": invoice.description,
                 "invoice_date": invoice.created_at,
                 "labor_charges": invoice.labor_charges,
                 "payment_status": (
@@ -149,6 +150,7 @@ def get_mechanic_invoice_full_details(db: Session, invoice_id: int) -> dict | No
         "id": invoice.id,
         "customer_id": invoice.customer_id,
         "plate_number": invoice.plate_number,
+        "description": invoice.description,
         "labor_charges": invoice.labor_charges,
         "payment_status": invoice.payment_status.value,
         "created_by": invoice.created_by,

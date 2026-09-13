@@ -34,6 +34,12 @@ class MechanicInvoice(Base):
         index=True,
     )
 
+    description: Mapped[str | None] = mapped_column(
+        String(1000),
+        nullable=True,
+        default=None,
+    )
+
     labor_charges: Mapped[Decimal] = mapped_column(
         Numeric(12, 2),
         nullable=False,

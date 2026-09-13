@@ -115,25 +115,30 @@ class _MechanicInvoiceDetailScreenState extends State<MechanicInvoiceDetailScree
           _buildHeader(inv, isMobile),
           SizedBox(height: isMobile ? 20 : 32),
           Expanded(
-            child: SingleChildScrollView(
-              child: Column(
-                children: [
-                  if (isMobile) ...[
-                    _InvoiceDetailsCard(invoice: inv),
-                    const SizedBox(height: 16),
-                    _CustomerCard(invoice: inv, onRefresh: _load),
-                  ] else
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(child: _InvoiceDetailsCard(invoice: inv)),
-                        const SizedBox(width: 24),
-                        Expanded(child: _CustomerCard(invoice: inv, onRefresh: _load)),
-                      ],
-                    ),
-                  SizedBox(height: isMobile ? 16 : 24),
-                  _RepairItemsCard(invoice: inv, isMobile: isMobile),
-                ],
+            child: ScrollConfiguration(
+              behavior: ScrollConfiguration.of(context).copyWith(scrollbars: false),
+              child: SingleChildScrollView(
+                child: Column(
+                  children: [
+                    if (isMobile) ...[
+                      _InvoiceDetailsCard(invoice: inv),
+                      const SizedBox(height: 16),
+                      _CustomerCard(invoice: inv, onRefresh: _load),
+                    ] else
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(child: _InvoiceDetailsCard(invoice: inv)),
+                          const SizedBox(width: 24),
+                          Expanded(child: _CustomerCard(invoice: inv, onRefresh: _load)),
+                        ],
+                      ),
+                    SizedBox(height: isMobile ? 16 : 24),
+                    _DescriptionCard(invoice: inv, isMobile: isMobile),
+                    SizedBox(height: isMobile ? 16 : 24),
+                    _RepairItemsCard(invoice: inv, isMobile: isMobile),
+                  ],
+                ),
               ),
             ),
           ),
@@ -509,6 +514,55 @@ class _InfoBlock extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────
+// Middle Section: Description Card
+// ─────────────────────────────────────────────────────────
+class _DescriptionCard extends StatelessWidget {
+  final MechanicInvoice invoice;
+  final bool isMobile;
+  const _DescriptionCard({required this.invoice, this.isMobile = false});
+
+  @override
+  Widget build(BuildContext context) {
+    final hasDesc = invoice.description != null && invoice.description!.trim().isNotEmpty;
+
+    return _StyledCard(
+      child: Padding(
+        padding: EdgeInsets.all(isMobile ? 16.0 : 24.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(color: const Color(0xFFFBF4DF), borderRadius: BorderRadius.circular(6)),
+                  child: const Icon(Icons.notes_outlined, color: _gold, size: 16),
+                ),
+                const SizedBox(width: 12),
+                const Text('Description', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15, color: _ink)),
+              ],
+            ),
+            const SizedBox(height: 16),
+            const Divider(height: 1, color: Color(0xFFF0F0F0)),
+            const SizedBox(height: 16),
+            Text(
+              hasDesc ? invoice.description!.trim() : 'No description provided.',
+              style: TextStyle(
+                fontSize: 14.5,
+                color: hasDesc ? _ink : _muted,
+                height: 1.5,
+                fontStyle: hasDesc ? FontStyle.normal : FontStyle.italic,
+                fontWeight: hasDesc ? FontWeight.w500 : FontWeight.normal,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────
 // Repair Items Table
 // ─────────────────────────────────────────────────────────
 class _RepairItemsCard extends StatelessWidget {
@@ -677,13 +731,27 @@ class _RepairItemsCard extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: const [
-                Text('Papay Charges', style: TextStyle(color: _gold, fontWeight: FontWeight.w600, fontSize: 13)),
-                Text(' * required', style: TextStyle(color: _goldDark, fontSize: 11)),
-              ],
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: const [
+                      Text('Papay Charges', style: TextStyle(color: _gold, fontWeight: FontWeight.w600, fontSize: 13)),
+                      Text(' * required', style: TextStyle(color: _goldDark, fontSize: 11)),
+                    ],
+                  ),
+                  if (invoice.description != null && invoice.description!.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      invoice.description!,
+                      style: const TextStyle(color: _muted, fontSize: 12, fontStyle: FontStyle.italic),
+                    ),
+                  ],
+                ],
+              ),
             ),
             Text('QAR ${invoice.laborCharges.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.w600, color: _ink, fontSize: 14)),
           ],

@@ -8,6 +8,8 @@ from app.models.insurance_customer import InsuranceCustomer
 from app.models.insurance_invoice import InsuranceInvoice
 from app.models.insurance_item import InsuranceItem
 from app.models.insurance_image import InsuranceImage
+from app.models.insurance_expense import InsuranceExpense
+from app.models.insurance_income import InsuranceIncome
 from app.models.mechanic_customer import MechanicCustomer
 from app.models.mechanic_invoice import MechanicInvoice
 from app.models.mechanic_item import MechanicItem

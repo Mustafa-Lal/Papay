@@ -61,6 +61,7 @@ def create_invoice_endpoint(
             phone_number=payload.customer.phone_number,
             qid=payload.customer.qid,
             plate_number=payload.plate_number,
+            description=payload.description,
             labor_charges=payload.labor_charges,
             payment_status=payload.payment_status,
             created_by=current_access_key.id,

@@ -18,6 +18,16 @@ from app.schemas.insurance_invoice import (
     InsuranceItemCreate,
     InsuranceImageResponse,
 )
+from app.schemas.insurance_finance import (
+    InsuranceExpenseCreate,
+    InsuranceExpenseListResponse,
+    InsuranceExpenseResponse,
+    InsuranceExpenseUpdate,
+    InsuranceIncomeCreate,
+    InsuranceIncomeListResponse,
+    InsuranceIncomeResponse,
+    InsuranceIncomeUpdate,
+)
 from app.services.insurance_customer_update import update_customer
 from app.services.insurance_invoice_by_plate_fetch import get_insurance_invoices_by_plate
 from app.services.insurance_invoice_creation import InsuranceItemData, create_insurance_invoice_transaction
@@ -31,6 +41,18 @@ from app.services.insurance_item_deletion import delete_insurance_item
 from app.services.insurance_image_deletion import delete_insurance_image
 from app.services.image_fetch import get_insurance_image
 from app.services.insurance_image import create_insurance_image
+from app.services.insurance_expense import (
+    create_insurance_expense,
+    deactivate_insurance_expense,
+    get_insurance_expenses,
+    update_insurance_expense,
+)
+from app.services.insurance_income import (
+    create_insurance_income,
+    deactivate_insurance_income,
+    get_insurance_incomes,
+    update_insurance_income,
+)
 from app.models.insurance_image import InsuranceImageType
 
 router = APIRouter(prefix="/insurance")
@@ -386,5 +408,229 @@ def delete_image_endpoint(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=str(error),
         ) from error
+
+
+# ---------------------------------------------------------
+# INSURANCE EXPENSE & INCOME ENDPOINTS
+# ---------------------------------------------------------
+
+@router.post(
+    "/expenses",
+    response_model=InsuranceExpenseResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def create_insurance_expense_endpoint(
+    payload: InsuranceExpenseCreate,
+    db: Session = Depends(get_db),
+    current_access_key: AccessKey = Depends(get_current_access_key),
+    _quota: None = Depends(require_db_quota),
+):
+    try:
+        expense = create_insurance_expense(
+            db=db,
+            description=payload.description,
+            price=payload.price,
+            created_by=current_access_key.id,
+        )
+        db.commit()
+        db.refresh(expense)
+        return expense
+    except ValueError as error:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(error),
+        ) from error
+
+
+@router.get(
+    "/expenses",
+    response_model=InsuranceExpenseListResponse,
+)
+def list_insurance_expenses_endpoint(
+    limit: int = Query(default=10, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
+    db: Session = Depends(get_db),
+    _: AccessKey = Depends(get_current_access_key),
+):
+    try:
+        return get_insurance_expenses(
+            db=db,
+            limit=limit,
+            offset=offset,
+        )
+    except ValueError as error:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(error),
+        ) from error
+
+
+@router.put(
+    "/expenses/{expense_id}",
+    response_model=InsuranceExpenseResponse,
+)
+def update_insurance_expense_endpoint(
+    expense_id: int,
+    payload: InsuranceExpenseUpdate,
+    db: Session = Depends(get_db),
+    _: AccessKey = Depends(get_current_access_key),
+):
+    try:
+        expense = update_insurance_expense(
+            db=db,
+            expense_id=expense_id,
+            description=payload.description,
+            price=payload.price,
+        )
+        db.commit()
+        db.refresh(expense)
+        return expense
+    except ValueError as error:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND
+            if str(error) == "Insurance expense not found."
+            else status.HTTP_400_BAD_REQUEST,
+            detail=str(error),
+        ) from error
+
+
+@router.delete(
+    "/expenses/{expense_id}",
+    response_model=InsuranceExpenseResponse,
+)
+def delete_insurance_expense_endpoint(
+    expense_id: int,
+    db: Session = Depends(get_db),
+    _: AccessKey = Depends(get_current_access_key),
+):
+    try:
+        expense = deactivate_insurance_expense(
+            db=db,
+            expense_id=expense_id,
+        )
+        db.commit()
+        db.refresh(expense)
+        return expense
+    except ValueError as error:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND
+            if str(error) == "Insurance expense not found."
+            else status.HTTP_400_BAD_REQUEST,
+            detail=str(error),
+        ) from error
+
+
+@router.post(
+    "/incomes",
+    response_model=InsuranceIncomeResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def create_insurance_income_endpoint(
+    payload: InsuranceIncomeCreate,
+    db: Session = Depends(get_db),
+    current_access_key: AccessKey = Depends(get_current_access_key),
+    _quota: None = Depends(require_db_quota),
+):
+    try:
+        income = create_insurance_income(
+            db=db,
+            description=payload.description,
+            price=payload.price,
+            created_by=current_access_key.id,
+        )
+        db.commit()
+        db.refresh(income)
+        return income
+    except ValueError as error:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(error),
+        ) from error
+
+
+@router.get(
+    "/incomes",
+    response_model=InsuranceIncomeListResponse,
+)
+def list_insurance_incomes_endpoint(
+    limit: int = Query(default=10, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
+    db: Session = Depends(get_db),
+    _: AccessKey = Depends(get_current_access_key),
+):
+    try:
+        return get_insurance_incomes(
+            db=db,
+            limit=limit,
+            offset=offset,
+        )
+    except ValueError as error:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(error),
+        ) from error
+
+
+@router.put(
+    "/incomes/{income_id}",
+    response_model=InsuranceIncomeResponse,
+)
+def update_insurance_income_endpoint(
+    income_id: int,
+    payload: InsuranceIncomeUpdate,
+    db: Session = Depends(get_db),
+    _: AccessKey = Depends(get_current_access_key),
+):
+    try:
+        income = update_insurance_income(
+            db=db,
+            income_id=income_id,
+            description=payload.description,
+            price=payload.price,
+        )
+        db.commit()
+        db.refresh(income)
+        return income
+    except ValueError as error:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND
+            if str(error) == "Insurance income not found."
+            else status.HTTP_400_BAD_REQUEST,
+            detail=str(error),
+        ) from error
+
+
+@router.delete(
+    "/incomes/{income_id}",
+    response_model=InsuranceIncomeResponse,
+)
+def delete_insurance_income_endpoint(
+    income_id: int,
+    db: Session = Depends(get_db),
+    _: AccessKey = Depends(get_current_access_key),
+):
+    try:
+        income = deactivate_insurance_income(
+            db=db,
+            income_id=income_id,
+        )
+        db.commit()
+        db.refresh(income)
+        return income
+    except ValueError as error:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND
+            if str(error) == "Insurance income not found."
+            else status.HTTP_400_BAD_REQUEST,
+            detail=str(error),
+        ) from error
+
+
 
 

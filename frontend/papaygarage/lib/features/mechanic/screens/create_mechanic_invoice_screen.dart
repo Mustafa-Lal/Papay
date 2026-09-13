@@ -75,6 +75,7 @@ class _CreateMechanicInvoiceScreenState extends State<CreateMechanicInvoiceScree
 
   final _plateController = TextEditingController();
   final _laborController = TextEditingController();
+  final _descriptionController = TextEditingController();
   String _paymentStatus = 'UNPAID';
 
   final _customerNameController = TextEditingController();
@@ -91,6 +92,7 @@ class _CreateMechanicInvoiceScreenState extends State<CreateMechanicInvoiceScree
   void dispose() {
     _plateController.dispose();
     _laborController.dispose();
+    _descriptionController.dispose();
     _customerNameController.dispose();
     _phoneController.dispose();
     _qidController.dispose();
@@ -115,6 +117,9 @@ class _CreateMechanicInvoiceScreenState extends State<CreateMechanicInvoiceScree
       plateNumber: _plateController.text.trim(),
       laborCharges: double.tryParse(_laborController.text) ?? 0,
       paymentStatus: parsePaymentStatus(_paymentStatus),
+      description: _descriptionController.text.trim().isEmpty
+          ? null
+          : _descriptionController.text.trim(),
       customerName: _customerNameController.text.trim().isEmpty
           ? null
           : _customerNameController.text.trim(),
@@ -335,6 +340,19 @@ class _CreateMechanicInvoiceScreenState extends State<CreateMechanicInvoiceScree
       ],
     );
 
+    final descriptionField = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const _FieldLabel(label: 'Description', hint: '(optional)'),
+        const SizedBox(height: 6),
+        _GoldInput(
+          controller: _descriptionController,
+          hint: 'e.g. Full service, brake pads replacement…',
+          prefixIcon: Icons.notes_outlined,
+        ),
+      ],
+    );
+
     if (isMobile) {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -344,18 +362,27 @@ class _CreateMechanicInvoiceScreenState extends State<CreateMechanicInvoiceScree
           laborField,
           const SizedBox(height: 18),
           statusField,
+          const SizedBox(height: 18),
+          descriptionField,
         ],
       );
     }
 
-    return Row(
+    return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Expanded(child: plateField),
-        const SizedBox(width: 16),
-        Expanded(child: laborField),
-        const SizedBox(width: 16),
-        Expanded(child: statusField),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(child: plateField),
+            const SizedBox(width: 16),
+            Expanded(child: laborField),
+            const SizedBox(width: 16),
+            Expanded(child: statusField),
+          ],
+        ),
+        const SizedBox(height: 18),
+        descriptionField,
       ],
     );
   }

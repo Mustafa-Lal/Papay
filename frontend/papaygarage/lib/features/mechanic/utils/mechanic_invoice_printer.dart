@@ -292,6 +292,13 @@ pw.Widget _itemsTable(MechanicInvoice invoice, pw.Font arFont, pw.Font arBold) {
         pw.Text('رسوم باباي',
             textDirection: pw.TextDirection.rtl,
             style: pw.TextStyle(font: arFont, fontSize: 7, color: _red)),
+        if (invoice.description != null && invoice.description!.isNotEmpty) ...[
+          pw.SizedBox(height: 4),
+          pw.Text(
+            invoice.description!,
+            style: pw.TextStyle(fontSize: 8, color: PdfColors.grey600, fontStyle: pw.FontStyle.italic),
+          ),
+        ],
       ]),
     ),
     pw.SizedBox(),

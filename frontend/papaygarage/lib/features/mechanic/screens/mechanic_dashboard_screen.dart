@@ -430,40 +430,12 @@ class _MechanicDashboardScreenState extends State<MechanicDashboardScreen> {
         final compact = _isCompact(context);
         return Padding(
           padding: EdgeInsets.symmetric(horizontal: compact ? 16 : _cardPadding, vertical: 14),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Showing $count ${count == 1 ? 'invoice' : 'invoices'}',
-                style: const TextStyle(fontSize: 13, color: _muted),
-              ),
-              Row(
-                children: [
-                  _pageButton(Icons.chevron_left, enabled: state.canGoPrev, onTap: state.previousPage),
-                  const SizedBox(width: 8),
-                  _pageButton(Icons.chevron_right, enabled: state.canGoNext, onTap: state.nextPage),
-                ],
-              ),
-            ],
+          child: Text(
+            'Showing $count ${count == 1 ? 'invoice' : 'invoices'}',
+            style: const TextStyle(fontSize: 13, color: _muted),
           ),
         );
       },
-    );
-  }
-
-  Widget _pageButton(IconData icon, {required bool enabled, VoidCallback? onTap}) {
-    return GestureDetector(
-      onTap: enabled ? onTap : null,
-      child: Container(
-        width: 34,
-        height: 34,
-        decoration: BoxDecoration(
-          color: _surface,
-          border: Border.all(color: _border),
-          borderRadius: BorderRadius.circular(7),
-        ),
-        child: Icon(icon, size: 16, color: enabled ? _ink : _muted2.withValues(alpha: 0.5)),
-      ),
     );
   }
 

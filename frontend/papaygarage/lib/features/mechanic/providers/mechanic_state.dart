@@ -107,6 +107,7 @@ class MechanicState extends ChangeNotifier {
     required String? phoneNumber,
     required String? qid,
     required List<Map<String, dynamic>> items,
+    String? description,
   }) async {
     _isLoading = true;
     _errorMessage = null;
@@ -121,6 +122,7 @@ class MechanicState extends ChangeNotifier {
         phoneNumber: phoneNumber,
         qid: qid,
         items: items,
+        description: description,
       );
       
       final summary = MechanicInvoiceSummary(

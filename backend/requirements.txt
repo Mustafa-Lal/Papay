@@ -1,0 +1,21 @@
+# Web framework & ASGI server
+fastapi
+uvicorn[standard]
+
+# Database ORM
+sqlalchemy
+
+# Data validation & settings
+pydantic
+
+# Environment variables
+python-dotenv
+
+# Form data & file uploads (required by FastAPI for UploadFile/File/Form)
+python-multipart
+
+# Image processing (required by insurance image service)
+Pillow
+
+# Testing (required by fastapi.testclient.TestClient)
+httpx

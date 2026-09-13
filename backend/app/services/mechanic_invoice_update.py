@@ -13,6 +13,7 @@ def update_mechanic_invoice(
     plate_number: str | None = None,
     labor_charges: Decimal | None = None,
     payment_status: PaymentStatus | None = None,
+    description: str | None = None,
 ) -> MechanicInvoice:
 
     invoice = db.scalar(
@@ -60,5 +61,9 @@ def update_mechanic_invoice(
             )
 
         invoice.payment_status = payment_status
+
+    # Update description (allow explicit clear by passing empty string)
+    if description is not None:
+        invoice.description = description.strip() or None
 
     return invoice

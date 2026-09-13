@@ -18,6 +18,8 @@ class ApiEndpoints {
   static const String insuranceCustomers = '/insurance/customers';
   static const String insuranceItems = '/insurance/items';
   static const String insuranceImages = '/insurance/images';
+  static const String insuranceExpenses = '/insurance/expenses';
+  static const String insuranceIncomes = '/insurance/incomes';
   // Mechanic Workspaces
   static const String mechanicInvoices = '/mechanic/invoices';
   static const String mechanicCustomers = '/mechanic/customers';

@@ -44,6 +44,7 @@ def create_mechanic_invoice_transaction(
     created_by: int,
     labor_charges: Decimal = Decimal("0.00"),
     payment_status: PaymentStatus = PaymentStatus.UNPAID,
+    description: str | None = None,
     items: list[dict] | None = None,
 ) -> MechanicInvoice:
 
@@ -75,6 +76,7 @@ def create_mechanic_invoice_transaction(
             created_by=created_by,
             labor_charges=labor_charges,
             payment_status=payment_status,
+            description=description,
         )
 
         db.flush()

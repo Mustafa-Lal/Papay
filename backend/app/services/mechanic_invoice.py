@@ -25,6 +25,7 @@ def create_mechanic_invoice(
     created_by: int,
     labor_charges: Decimal = Decimal("0.00"),
     payment_status: PaymentStatus = PaymentStatus.UNPAID,
+    description: str | None = None,
 ) -> MechanicInvoice:
 
     # Verify that the mechanic customer exists.
@@ -54,6 +55,7 @@ def create_mechanic_invoice(
     invoice = MechanicInvoice(
         customer_id=customer_id,
         plate_number=plate_number.strip(),
+        description=description.strip() if description else None,
         labor_charges=labor_charges,
         payment_status=payment_status,
         created_by=created_by,
