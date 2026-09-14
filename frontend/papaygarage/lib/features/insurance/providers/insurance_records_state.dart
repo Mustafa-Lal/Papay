@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../models/insurance_models.dart';
 import '../services/insurance_records_service.dart';
 
 class InsuranceRecordsState extends ChangeNotifier {
@@ -26,6 +27,19 @@ class InsuranceRecordsState extends ChangeNotifier {
   bool get hasMoreIncomes => _hasMoreIncomes;
   bool get hasMoreExpenses => _hasMoreExpenses;
 
+  // Report state
+  InsuranceFinanceReport? _report;
+  bool _isLoadingReport = false;
+  String? _reportErrorMessage;
+  DateTime? _reportStartDate;
+  DateTime? _reportEndDate;
+
+  InsuranceFinanceReport? get report => _report;
+  bool get isLoadingReport => _isLoadingReport;
+  String? get reportErrorMessage => _reportErrorMessage;
+  DateTime? get reportStartDate => _reportStartDate;
+  DateTime? get reportEndDate => _reportEndDate;
+
   bool hasMoreFor(String catId) {
     switch (catId) {
       case 'income':
@@ -39,6 +53,7 @@ class InsuranceRecordsState extends ChangeNotifier {
 
   InsuranceRecordsState({required InsuranceRecordsService service})
       : _service = service;
+
 
   // ---------------------------------------------------------------------------
   // Fetch
@@ -242,4 +257,37 @@ class InsuranceRecordsState extends ChangeNotifier {
       return false;
     }
   }
+
+  // ---------------------------------------------------------------------------
+  // Report
+  // ---------------------------------------------------------------------------
+
+  void setReportDateRange(DateTime? start, DateTime? end) {
+    _reportStartDate = start;
+    _reportEndDate = end;
+    notifyListeners();
+  }
+
+  Future<void> fetchReport({DateTime? start, DateTime? end}) async {
+    _isLoadingReport = true;
+    _reportErrorMessage = null;
+    if (start != null || end != null) {
+      _reportStartDate = start;
+      _reportEndDate = end;
+    }
+    notifyListeners();
+    try {
+      final res = await _service.getFinanceReport(
+        startDate: _reportStartDate,
+        endDate: _reportEndDate,
+      );
+      _report = res;
+    } catch (e) {
+      _reportErrorMessage = e.toString().replaceAll('Exception: ', '');
+    } finally {
+      _isLoadingReport = false;
+      notifyListeners();
+    }
+  }
 }
+

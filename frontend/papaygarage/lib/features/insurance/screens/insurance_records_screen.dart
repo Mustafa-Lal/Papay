@@ -5,7 +5,9 @@ import 'package:intl/intl.dart';
 import 'dart:math';
 
 import '../../mechanic/models/record_models.dart';
+import '../models/insurance_models.dart';
 import '../providers/insurance_records_state.dart';
+import '../utils/insurance_finance_report_printer.dart';
 
 // ─── Design Tokens ───────────────────────────────────────────────────────────
 const _ink = Color(0xFF1C1812);
@@ -71,6 +73,14 @@ final _insuranceCategories = [
       ),
     ],
   ),
+  const RecordCategory(
+    id: 'report',
+    label: 'Report & Print',
+    icon: 'receipt-long',
+    color: 0xFFB8863A,
+    softColor: 0xFFF3E2B8,
+    columns: [],
+  ),
 ];
 
 Map<String, dynamic> _emptyRow(RecordCategory cat) {
@@ -133,11 +143,18 @@ class _InsuranceRecordsScreenState extends State<InsuranceRecordsScreen>
     _tabAnimCtrl
       ..reset()
       ..forward();
+    if (id == 'report') {
+      final st = context.read<InsuranceRecordsState>();
+      if (st.report == null) {
+        st.fetchReport();
+      }
+    }
   }
 
   void _updateRow(String rowId, String key, String val) {
     setState(() {
       final rows = _draftRows[_activeId]!;
+
       final idx = rows.indexWhere((r) => r['id'] == rowId);
       if (idx != -1) rows[idx][key] = val;
     });
@@ -507,8 +524,64 @@ class _InsuranceRecordsScreenState extends State<InsuranceRecordsScreen>
         return Icons.trending_up_rounded;
       case 'trending-down':
         return Icons.trending_down_rounded;
+      case 'receipt-long':
+      case 'report':
+        return Icons.receipt_long_rounded;
       default:
         return Icons.circle;
+    }
+  }
+
+  Future<void> _pickReportDateRange() async {
+    final st = context.read<InsuranceRecordsState>();
+    final initialRange = (st.reportStartDate != null && st.reportEndDate != null)
+        ? DateTimeRange(start: st.reportStartDate!, end: st.reportEndDate!)
+        : null;
+
+    final picked = await showDateRangePicker(
+      context: context,
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2100),
+      initialDateRange: initialRange,
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.light(
+              primary: _gold,
+              onPrimary: Colors.white,
+              onSurface: _ink,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+
+    if (picked != null) {
+      st.fetchReport(start: picked.start, end: picked.end);
+    }
+  }
+
+  void _applyQuickReportDate(String filter) {
+    final st = context.read<InsuranceRecordsState>();
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+
+    switch (filter) {
+      case 'today':
+        st.fetchReport(start: today, end: today);
+        break;
+      case 'week':
+        final monday = today.subtract(Duration(days: today.weekday - 1));
+        st.fetchReport(start: monday, end: today);
+        break;
+      case 'month':
+        final firstOfMonth = DateTime(now.year, now.month, 1);
+        st.fetchReport(start: firstOfMonth, end: today);
+        break;
+      case 'all':
+        st.fetchReport(start: null, end: null);
+        break;
     }
   }
 
@@ -596,10 +669,10 @@ class _InsuranceRecordsScreenState extends State<InsuranceRecordsScreen>
           duration: const Duration(milliseconds: 200),
           curve: Curves.easeOut,
           margin: const EdgeInsets.symmetric(horizontal: 4),
-          padding: EdgeInsets.symmetric(vertical: 12, horizontal: compact ? 12 : 0),
+          padding: EdgeInsets.symmetric(vertical: 15, horizontal: compact ? 8 : 16),
           decoration: BoxDecoration(
             color: isActive ? _card : Colors.transparent,
-            borderRadius: BorderRadius.circular(11),
+            borderRadius: BorderRadius.circular(12),
             boxShadow: isActive
                 ? [
                     BoxShadow(
@@ -612,15 +685,18 @@ class _InsuranceRecordsScreenState extends State<InsuranceRecordsScreen>
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(_icon(cat.icon), size: 18, color: isActive ? cColor : _muted),
+              Icon(_icon(cat.icon), size: 19, color: isActive ? cColor : _muted),
               const SizedBox(width: 8),
-              Text(
-                cat.label,
-                style: GoogleFonts.oswald(
-                  fontSize: 13,
-                  fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
-                  letterSpacing: 0.4,
-                  color: isActive ? cColor : _muted,
+              Flexible(
+                child: Text(
+                  cat.label,
+                  style: GoogleFonts.oswald(
+                    fontSize: 13.5,
+                    fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
+                    letterSpacing: 0.4,
+                    color: isActive ? cColor : _muted,
+                  ),
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],
@@ -644,6 +720,9 @@ class _InsuranceRecordsScreenState extends State<InsuranceRecordsScreen>
   }
 
   Widget _buildMainCard() {
+    if (_activeId == 'report') {
+      return _buildReportCard();
+    }
     final pad = _isCompact(context) ? 16.0 : 24.0;
     return Container(
       decoration: BoxDecoration(
@@ -680,6 +759,668 @@ class _InsuranceRecordsScreenState extends State<InsuranceRecordsScreen>
       ),
     );
   }
+
+  Widget _buildReportCard() {
+    final pad = _isCompact(context) ? 16.0 : 24.0;
+    final st = context.watch<InsuranceRecordsState>();
+    final report = st.report;
+    final loading = st.isLoadingReport;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: _card,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: _border),
+        boxShadow: const [
+          BoxShadow(color: Color(0x0A000000), blurRadius: 32, offset: Offset(0, 8))
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _buildReportHeaderBanner(st, report),
+          Padding(
+            padding: EdgeInsets.all(pad),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _buildReportFilterBar(st),
+                const SizedBox(height: 20),
+                if (loading) ...[
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 48),
+                    child: Center(
+                      child: CircularProgressIndicator(color: _gold, strokeWidth: 2.5),
+                    ),
+                  ),
+                ] else if (st.reportErrorMessage != null) ...[
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFDE8E8),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFFF8B4B4)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.error_outline_rounded, color: Color(0xFFC81E1E), size: 20),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            st.reportErrorMessage!,
+                            style: GoogleFonts.inter(
+                              color: const Color(0xFF9B1C1C),
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: () => st.fetchReport(),
+                          child: const Text('Retry'),
+                        ),
+                      ],
+                    ),
+                  ),
+                ] else if (report != null) ...[
+                  _buildReportSummaryKPIs(report),
+                  const SizedBox(height: 24),
+                  _buildReportLedgerPreview(report, st),
+                ] else ...[
+                  const _EmptyState(color: _gold),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildReportHeaderBanner(InsuranceRecordsState st, InsuranceFinanceReport? report) {
+    final compact = _isCompact(context);
+    final titleWidget = Row(
+      children: [
+        const Icon(Icons.receipt_long_rounded, size: 20, color: _gold),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Text(
+            'INSURANCE FINANCE REPORT & LEDGER',
+            style: GoogleFonts.oswald(
+              fontSize: compact ? 13 : 14,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 1.1,
+              color: _gold,
+            ),
+          ),
+        ),
+      ],
+    );
+
+    final printBtn = report != null
+        ? ElevatedButton.icon(
+            onPressed: () => printInsuranceFinanceReport(
+              context,
+              report,
+              startDate: st.reportStartDate,
+              endDate: st.reportEndDate,
+            ),
+            icon: const Icon(Icons.print_rounded, size: 18, color: Colors.white),
+            label: Text(
+              'Print Ledger',
+              style: GoogleFonts.oswald(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 0.6,
+                color: Colors.white,
+              ),
+            ),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: _gold,
+              foregroundColor: Colors.white,
+              elevation: 0,
+              minimumSize: const Size(0, 48),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+          )
+        : null;
+
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: compact ? 16 : 24, vertical: 14),
+      decoration: BoxDecoration(
+        color: _gold.withValues(alpha: 0.05),
+        border: Border(bottom: BorderSide(color: _gold.withValues(alpha: 0.12))),
+      ),
+      child: compact && printBtn != null
+          ? Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                titleWidget,
+                const SizedBox(height: 12),
+                printBtn,
+              ],
+            )
+          : Row(
+              children: [
+                Expanded(child: titleWidget),
+                if (printBtn != null) printBtn,
+              ],
+            ),
+    );
+  }
+
+  Widget _buildReportFilterBar(InsuranceRecordsState st) {
+    String rangeLabel = 'All Time';
+    if (st.reportStartDate != null && st.reportEndDate != null) {
+      final s = DateFormat('dd/MM/yyyy').format(st.reportStartDate!);
+      final e = DateFormat('dd/MM/yyyy').format(st.reportEndDate!);
+      rangeLabel = s == e ? s : '$s - $e';
+    } else if (st.reportStartDate != null) {
+      rangeLabel = 'From ${DateFormat('dd/MM/yyyy').format(st.reportStartDate!)}';
+    } else if (st.reportEndDate != null) {
+      rangeLabel = 'Until ${DateFormat('dd/MM/yyyy').format(st.reportEndDate!)}';
+    }
+
+    Widget quickPill(String label, String key) {
+      return InkWell(
+        onTap: () => _applyQuickReportDate(key),
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF3EFE8),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: _border),
+          ),
+          child: Text(
+            label,
+            style: GoogleFonts.inter(fontSize: 12.5, fontWeight: FontWeight.w600, color: _ink),
+          ),
+        ),
+      );
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFAF8F5),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: _border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            alignment: WrapAlignment.spaceBetween,
+            children: [
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  OutlinedButton.icon(
+                    onPressed: _pickReportDateRange,
+                    icon: const Icon(Icons.date_range_rounded, size: 18, color: _gold),
+                    label: Text(
+                      'Select Date Range',
+                      style: GoogleFonts.inter(fontSize: 13.5, fontWeight: FontWeight.w600, color: _ink),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: _gold, width: 1.5),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      minimumSize: const Size(0, 48),
+                      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  _GlassButton(
+                    onTap: () => st.fetchReport(),
+                    child: const Icon(Icons.refresh_rounded, size: 20, color: _ink),
+                  ),
+                ],
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                decoration: BoxDecoration(
+                  color: _goldSoft,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: _goldTint),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.calendar_today_rounded, size: 14, color: _goldDark),
+                    const SizedBox(width: 6),
+                    Text(
+                      rangeLabel,
+                      style: GoogleFonts.inter(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w600,
+                        color: _goldDark,
+                      ),
+                    ),
+                    if (st.reportStartDate != null || st.reportEndDate != null) ...[
+                      const SizedBox(width: 6),
+                      InkWell(
+                        onTap: () => st.fetchReport(start: null, end: null),
+                        child: const Icon(Icons.close_rounded, size: 15, color: _goldDark),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              Text(
+                'Quick filter:',
+                style: GoogleFonts.inter(fontSize: 12, color: _muted, fontWeight: FontWeight.w500),
+              ),
+              quickPill('Today', 'today'),
+              quickPill('This Week', 'week'),
+              quickPill('This Month', 'month'),
+              quickPill('All Time', 'all'),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildReportSummaryKPIs(InsuranceFinanceReport report) {
+    final compact = _isCompact(context);
+
+    Widget kpiCard({
+      required String title,
+      required String amount,
+      required String countSubtitle,
+      required Color color,
+      required Color bgColor,
+      required IconData icon,
+    }) {
+      return Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: bgColor,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: color.withValues(alpha: 0.2)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 42,
+              height: 42,
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(icon, color: color, size: 20),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: GoogleFonts.inter(
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w600,
+                      color: _muted,
+                      letterSpacing: 0.3,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    amount,
+                    style: GoogleFonts.oswald(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                      color: _ink,
+                    ),
+                  ),
+                  Text(
+                    countSubtitle,
+                    style: GoogleFonts.inter(
+                      fontSize: 11,
+                      color: _muted,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final isProfit = report.net >= 0;
+
+    final cards = [
+      kpiCard(
+        title: 'TOTAL EXPENSES',
+        amount: 'QR ${report.totalExpense.toStringAsFixed(2)}',
+        countSubtitle: '${report.expenseCount} entries',
+        color: const Color(0xFFC24C4A),
+        bgColor: const Color(0xFFFDF4F4),
+        icon: Icons.trending_down_rounded,
+      ),
+      kpiCard(
+        title: 'TOTAL INCOME',
+        amount: 'QR ${report.totalIncome.toStringAsFixed(2)}',
+        countSubtitle: '${report.incomeCount} entries',
+        color: const Color(0xFF3F8C58),
+        bgColor: const Color(0xFFF3FAF5),
+        icon: Icons.trending_up_rounded,
+      ),
+      kpiCard(
+        title: isProfit ? 'NET PROFIT' : 'NET LOSS',
+        amount: '${isProfit ? '+' : ''}${report.net.toStringAsFixed(2)} QR',
+        countSubtitle: isProfit ? 'Positive balance' : 'Negative balance',
+        color: isProfit ? _gold : const Color(0xFFC24C4A),
+        bgColor: _goldSoft,
+        icon: Icons.account_balance_wallet_rounded,
+      ),
+    ];
+
+    if (compact) {
+      return Column(
+        children: cards.map((c) => Padding(padding: const EdgeInsets.only(bottom: 10), child: c)).toList(),
+      );
+    }
+
+    return Row(
+      children: cards
+          .map((c) => Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 5),
+                  child: c,
+                ),
+              ))
+          .toList(),
+    );
+  }
+
+  Widget _buildReportLedgerPreview(InsuranceFinanceReport report, InsuranceRecordsState st) {
+    final expenses = report.expenses;
+    final incomes = report.incomes;
+    final maxLen = max(expenses.length, incomes.length);
+
+    String dateHeaderStr;
+    if (st.reportStartDate != null && st.reportEndDate != null) {
+      final s = DateFormat('dd/MM/yyyy').format(st.reportStartDate!);
+      final e = DateFormat('dd/MM/yyyy').format(st.reportEndDate!);
+      dateHeaderStr = s == e ? 'DATE $s' : 'DATE $s - $e';
+    } else if (st.reportStartDate != null) {
+      dateHeaderStr = 'DATE FROM ${DateFormat('dd/MM/yyyy').format(st.reportStartDate!)}';
+    } else if (st.reportEndDate != null) {
+      dateHeaderStr = 'DATE UNTIL ${DateFormat('dd/MM/yyyy').format(st.reportEndDate!)}';
+    } else {
+      dateHeaderStr = 'DATE ${DateFormat('dd/MM/yyyy').format(DateTime.now())}';
+    }
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.black, width: 1.2),
+        boxShadow: const [
+          BoxShadow(color: Color(0x06000000), blurRadius: 16, offset: Offset(0, 4)),
+        ],
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        children: [
+          // Header Paper Look
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            child: Column(
+              children: [
+                Text(
+                  'PAPAY GARAGE',
+                  style: GoogleFonts.oswald(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 2.0,
+                    color: Colors.black,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  dateHeaderStr,
+                  style: GoogleFonts.oswald(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 1.0,
+                    color: Colors.black87,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const Divider(height: 1, thickness: 1.2, color: Colors.black),
+          // Table Layout
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minWidth: 780),
+              child: Table(
+                border: TableBorder.all(color: Colors.black, width: 1.0),
+                columnWidths: const {
+                  0: const FixedColumnWidth(85),
+                  1: const FlexColumnWidth(2.5),
+                  2: const FixedColumnWidth(85),
+                  3: const FlexColumnWidth(2.5),
+                  4: const FixedColumnWidth(85),
+                  5: const FixedColumnWidth(95),
+                },
+                children: [
+                  // Table Header
+                  TableRow(
+                    decoration: const BoxDecoration(color: Color(0xFFEEEEEE)),
+                    children: [
+                      _thCell('Date'),
+                      _thCell('Expenses Description'),
+                      _thCell('QTR'),
+                      _thCell('Income Description'),
+                      _thCell('QTR'),
+                      _thCell('Total (QTR)'),
+                    ],
+                  ),
+                  // Table Rows
+                  if (maxLen == 0)
+                    TableRow(
+                      children: [
+                        _tdCell('-', align: TextAlign.center),
+                        _tdCell('No expenses for this period', isMuted: true),
+                        _tdCell('0.00', align: TextAlign.right),
+                        _tdCell('No income for this period', isMuted: true),
+                        _tdCell('0.00', align: TextAlign.right),
+                        _tdCell('0.00', align: TextAlign.right),
+                      ],
+                    )
+                  else
+                    for (int i = 0; i < maxLen; i++) ...[
+                      () {
+                        final exp = i < expenses.length ? expenses[i] : null;
+                        final inc = i < incomes.length ? incomes[i] : null;
+
+                        String totalText = '';
+                        Color totalColor = Colors.black87;
+                        if (exp != null || inc != null) {
+                          final diff = (inc?.price ?? 0.0) - (exp?.price ?? 0.0);
+                          if (diff > 0) {
+                            totalText = '+${diff.toStringAsFixed(2)}';
+                            totalColor = const Color(0xFF1E6B37);
+                          } else if (diff < 0) {
+                            totalText = '-${diff.abs().toStringAsFixed(2)}';
+                            totalColor = const Color(0xFFB3261E);
+                          } else {
+                            totalText = '0.00';
+                            totalColor = Colors.black87;
+                          }
+                        }
+
+                        return TableRow(
+                          children: [
+                            _tdCell(
+                              exp != null
+                                  ? DateFormat('dd/MM/yyyy').format(exp.createdAt)
+                                  : (inc != null
+                                      ? DateFormat('dd/MM/yyyy').format(inc.createdAt)
+                                      : ''),
+                              align: TextAlign.center,
+                            ),
+                            _tdCell(exp?.description ?? ''),
+                            _tdCell(
+                              exp != null ? exp.price.toStringAsFixed(2) : '',
+                              align: TextAlign.right,
+                            ),
+                            _tdCell(inc?.description ?? ''),
+                            _tdCell(
+                              inc != null ? inc.price.toStringAsFixed(2) : '',
+                              align: TextAlign.right,
+                            ),
+                            _tdCell(
+                              totalText,
+                              align: TextAlign.right,
+                              color: totalColor,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ],
+                        );
+                      }(),
+                    ],
+                  // Totals Row
+                  TableRow(
+                    decoration: const BoxDecoration(color: Color(0xFFF5F5F5)),
+                    children: [
+                      _thCell(''),
+                      _thCell('TOTAL EXPENSES', align: TextAlign.right),
+                      _thCell(report.totalExpense.toStringAsFixed(2), align: TextAlign.right),
+                      _thCell('TOTAL INCOME', align: TextAlign.right),
+                      _thCell(report.totalIncome.toStringAsFixed(2), align: TextAlign.right),
+                      _thCell(
+                        '${report.net >= 0 ? '+' : '-'}${report.net.abs().toStringAsFixed(2)}',
+                        align: TextAlign.right,
+                        color: report.net >= 0 ? const Color(0xFF1E6B37) : const Color(0xFFB3261E),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+          // Footer Net Balance Strip
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            decoration: const BoxDecoration(
+              color: Color(0xFFEEEEEE),
+              border: Border(top: BorderSide(color: Colors.black, width: 1.2)),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'NET BALANCE / PROFIT (صافي الأرباح):',
+                  style: GoogleFonts.oswald(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0.5,
+                    color: Colors.black,
+                  ),
+                ),
+                Text(
+                  '${report.net >= 0 ? '+' : '-'}${report.net.abs().toStringAsFixed(2)} QTR',
+                  style: GoogleFonts.oswald(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: report.net >= 0 ? const Color(0xFF1E6B37) : const Color(0xFFB3261E),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Bottom Print Action Button
+          Container(
+            padding: const EdgeInsets.all(16),
+            color: const Color(0xFFFAF8F5),
+            child: Center(
+              child: ElevatedButton.icon(
+                onPressed: () => printInsuranceFinanceReport(
+                  context,
+                  report,
+                  startDate: st.reportStartDate,
+                  endDate: st.reportEndDate,
+                ),
+                icon: const Icon(Icons.print_rounded, size: 18, color: Colors.white),
+                label: Text(
+                  'Print Ledger Sheet',
+                  style: GoogleFonts.oswald(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0.8,
+                    color: Colors.white,
+                  ),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _ink,
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                  padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _thCell(String text, {TextAlign align = TextAlign.center, Color? color}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+      child: Text(
+        text,
+        textAlign: align,
+        style: GoogleFonts.oswald(
+          fontSize: 12,
+          fontWeight: FontWeight.w700,
+          color: color ?? Colors.black,
+        ),
+      ),
+    );
+  }
+
+  Widget _tdCell(
+    String text, {
+    TextAlign align = TextAlign.left,
+    bool isMuted = false,
+    Color? color,
+    FontWeight? fontWeight,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+      child: Text(
+        text,
+        textAlign: align,
+        style: GoogleFonts.inter(
+          fontSize: 12,
+          fontWeight: fontWeight ?? FontWeight.w500,
+          color: color ?? (isMuted ? _muted : Colors.black87),
+        ),
+      ),
+    );
+  }
+
 
   Widget _buildSectionBanner(String title, Color color, IconData icon) {
     final compact = _isCompact(context);
@@ -1379,10 +2120,10 @@ class _AddRowButton extends StatelessWidget {
         borderRadius: BorderRadius.circular(10),
         child: Container(
           width: _isCompact(context) ? double.infinity : null,
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
           decoration: BoxDecoration(
             color: softColor,
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(12),
             border: Border.all(color: color.withValues(alpha: 0.25), width: 1.5),
           ),
           child: Row(
@@ -1390,11 +2131,11 @@ class _AddRowButton extends StatelessWidget {
                 _isCompact(context) ? MainAxisSize.max : MainAxisSize.min,
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.add_rounded, size: 17, color: color),
+              Icon(Icons.add_rounded, size: 18, color: color),
               const SizedBox(width: 6),
               Text('Add row',
                   style: GoogleFonts.inter(
-                      fontSize: 13.5, fontWeight: FontWeight.w700, color: color)),
+                      fontSize: 14, fontWeight: FontWeight.w700, color: color)),
             ],
           ),
         ),
@@ -1426,25 +2167,25 @@ class _SaveButton extends StatelessWidget {
             onTap: onTap,
             borderRadius: BorderRadius.circular(12),
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 13),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 15),
               child: Row(
                 mainAxisSize: expand ? MainAxisSize.max : MainAxisSize.min,
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   if (loading)
                     const SizedBox(
-                      width: 16,
-                      height: 16,
+                      width: 17,
+                      height: 17,
                       child: CircularProgressIndicator(
-                          strokeWidth: 2, color: Colors.white),
+                          strokeWidth: 2.2, color: Colors.white),
                     )
                   else
-                    const Icon(Icons.save_rounded, size: 17, color: Colors.white),
+                    const Icon(Icons.save_rounded, size: 18, color: Colors.white),
                   const SizedBox(width: 8),
                   Text(
                     label,
                     style: GoogleFonts.inter(
-                        fontSize: 14,
+                        fontSize: 14.5,
                         fontWeight: FontWeight.w700,
                         color: Colors.white),
                   ),
@@ -1469,29 +2210,29 @@ class _FetchButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Material(
         color: onTap == null ? color.withValues(alpha: 0.5) : color,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(12),
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(12),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 13),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 if (loading)
                   const SizedBox(
-                    width: 14,
-                    height: 14,
+                    width: 16,
+                    height: 16,
                     child: CircularProgressIndicator(
                         strokeWidth: 2, color: Colors.white),
                   )
                 else
-                  const Icon(Icons.refresh_rounded, size: 16, color: Colors.white),
-                const SizedBox(width: 6),
+                  const Icon(Icons.refresh_rounded, size: 17, color: Colors.white),
+                const SizedBox(width: 8),
                 Text(
                   'Fetch Records',
                   style: GoogleFonts.inter(
-                      fontSize: 13.5,
+                      fontSize: 14,
                       fontWeight: FontWeight.w700,
                       color: Colors.white),
                 ),
@@ -1509,16 +2250,16 @@ class _HideButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) => OutlinedButton.icon(
         onPressed: onTap,
-        icon: const Icon(Icons.visibility_off_outlined, size: 15, color: _muted),
+        icon: const Icon(Icons.visibility_off_outlined, size: 16, color: _muted),
         label: Text(
           'Hide',
           style: GoogleFonts.inter(
-              fontSize: 13, fontWeight: FontWeight.w600, color: _muted),
+              fontSize: 13.5, fontWeight: FontWeight.w600, color: _muted),
         ),
         style: OutlinedButton.styleFrom(
           side: const BorderSide(color: _border, width: 1.5),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 13),
         ),
       );
 }
@@ -1570,12 +2311,12 @@ class _GlassButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) => InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(12),
         child: Container(
-          padding: const EdgeInsets.all(9),
+          padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
             color: _card,
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(12),
             border: Border.all(color: _border, width: 1.5),
           ),
           child: child,

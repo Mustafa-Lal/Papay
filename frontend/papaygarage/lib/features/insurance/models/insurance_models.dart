@@ -211,3 +211,71 @@ class InsuranceInvoiceSummary {
     );
   }
 }
+
+class InsuranceFinanceReportItem {
+  final int id;
+  final String description;
+  final double price;
+  final DateTime createdAt;
+
+  InsuranceFinanceReportItem({
+    required this.id,
+    required this.description,
+    required this.price,
+    required this.createdAt,
+  });
+
+  factory InsuranceFinanceReportItem.fromJson(Map<String, dynamic> json) {
+    return InsuranceFinanceReportItem(
+      id: json['id'] as int,
+      description: (json['description'] ?? '') as String,
+      price: double.tryParse(json['price']?.toString() ?? '0') ?? 0.0,
+      createdAt: DateTime.parse(json['created_at'] as String),
+    );
+  }
+}
+
+class InsuranceFinanceReport {
+  final DateTime? startDate;
+  final DateTime? endDate;
+  final List<InsuranceFinanceReportItem> expenses;
+  final List<InsuranceFinanceReportItem> incomes;
+  final double totalExpense;
+  final double totalIncome;
+  final double net;
+  final int expenseCount;
+  final int incomeCount;
+
+  InsuranceFinanceReport({
+    this.startDate,
+    this.endDate,
+    required this.expenses,
+    required this.incomes,
+    required this.totalExpense,
+    required this.totalIncome,
+    required this.net,
+    required this.expenseCount,
+    required this.incomeCount,
+  });
+
+  factory InsuranceFinanceReport.fromJson(Map<String, dynamic> json) {
+    return InsuranceFinanceReport(
+      startDate: json['start_date'] != null ? DateTime.tryParse(json['start_date'] as String) : null,
+      endDate: json['end_date'] != null ? DateTime.tryParse(json['end_date'] as String) : null,
+      expenses: (json['expenses'] as List<dynamic>?)
+              ?.map((e) => InsuranceFinanceReportItem.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          [],
+      incomes: (json['incomes'] as List<dynamic>?)
+              ?.map((e) => InsuranceFinanceReportItem.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          [],
+      totalExpense: double.tryParse(json['total_expense']?.toString() ?? '0') ?? 0.0,
+      totalIncome: double.tryParse(json['total_income']?.toString() ?? '0') ?? 0.0,
+      net: double.tryParse(json['net']?.toString() ?? '0') ?? 0.0,
+      expenseCount: (json['expense_count'] as num?)?.toInt() ?? 0,
+      incomeCount: (json['income_count'] as num?)?.toInt() ?? 0,
+    );
+  }
+}
+

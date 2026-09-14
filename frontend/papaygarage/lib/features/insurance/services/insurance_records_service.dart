@@ -1,5 +1,7 @@
+import 'package:intl/intl.dart';
 import '../../../core/api/api_client.dart';
 import '../../../core/api/api_endpoints.dart';
+import '../models/insurance_models.dart';
 
 class InsuranceRecordsService {
   final ApiClient _apiClient;
@@ -53,4 +55,27 @@ class InsuranceRecordsService {
   Future<void> updateExpense(int id, Map<String, dynamic> data) async {
     await _apiClient.put('${ApiEndpoints.insuranceExpenses}/$id', body: data);
   }
+
+  // ---------------------------------------------------------------------------
+  // Finance Report
+  // ---------------------------------------------------------------------------
+
+  Future<InsuranceFinanceReport> getFinanceReport({
+    DateTime? startDate,
+    DateTime? endDate,
+  }) async {
+    final Map<String, String> qParams = {};
+    if (startDate != null) {
+      qParams['start_date'] = DateFormat('yyyy-MM-dd').format(startDate);
+    }
+    if (endDate != null) {
+      qParams['end_date'] = DateFormat('yyyy-MM-dd').format(endDate);
+    }
+    final response = await _apiClient.get(
+      ApiEndpoints.insuranceReport,
+      queryParameters: qParams.isNotEmpty ? qParams : null,
+    );
+    return InsuranceFinanceReport.fromJson(response as Map<String, dynamic>);
+  }
 }
+

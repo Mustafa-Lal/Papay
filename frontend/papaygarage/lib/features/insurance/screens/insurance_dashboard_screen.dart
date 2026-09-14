@@ -288,15 +288,16 @@ class _InsuranceDashboardScreenState extends State<InsuranceDashboardScreen> {
   }) {
     return OutlinedButton.icon(
       onPressed: onPressed,
-      icon: Icon(icon, size: 16, color: _accent),
-      label: Text(label, style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600, color: _accent)),
+      icon: Icon(icon, size: 17, color: _accent),
+      label: Text(label, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: _accent)),
       style: OutlinedButton.styleFrom(
         foregroundColor: const Color(0xFFE5E7EB),
         backgroundColor: _accent,
         side: const BorderSide(color: _accentDark),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-        padding: EdgeInsets.symmetric(horizontal: 14, vertical: isMobile ? 12 : 14),
-        textStyle: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        padding: EdgeInsets.symmetric(horizontal: 16, vertical: isMobile ? 14 : 16),
+        minimumSize: const Size(0, 48),
+        textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
       ).copyWith(
         backgroundColor: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.hovered)) return const Color(0xFF2A2A28);
@@ -323,7 +324,7 @@ class _InsuranceDashboardScreenState extends State<InsuranceDashboardScreen> {
     );
 
     final durationButton = SizedBox(
-      height: 42,
+      height: 48,
       width: isMobile ? double.infinity : null,
       child: OutlinedButton.icon(
         onPressed: _pickDateRange,
@@ -339,8 +340,8 @@ class _InsuranceDashboardScreenState extends State<InsuranceDashboardScreen> {
           foregroundColor: _ink,
           backgroundColor: const Color.fromARGB(93, 184, 134, 58),
           side: const BorderSide(color: _accent),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           textStyle: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600),
         ).copyWith(
           side: WidgetStateProperty.resolveWith((states) {
@@ -352,7 +353,7 @@ class _InsuranceDashboardScreenState extends State<InsuranceDashboardScreen> {
     );
 
     final newInvoiceButton = SizedBox(
-      height: 42,
+      height: 48,
       width: isMobile ? double.infinity : null,
       child: ElevatedButton.icon(
         onPressed: _goToCreate,
@@ -362,8 +363,8 @@ class _InsuranceDashboardScreenState extends State<InsuranceDashboardScreen> {
           foregroundColor: Colors.white,
           backgroundColor: _accent,
           elevation: 0,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
           textStyle: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600),
         ).copyWith(
           backgroundColor: WidgetStateProperty.resolveWith((states) {

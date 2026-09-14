@@ -1,3 +1,4 @@
+from datetime import date, datetime, time, timedelta, timezone
 from decimal import Decimal
 
 from sqlalchemy import func, select
@@ -50,6 +51,8 @@ def create_insurance_expense(
 
 def get_insurance_expenses(
     db: Session,
+    start_date: date | None = None,
+    end_date: date | None = None,
     limit: int = 10,
     offset: int = 0,
 ) -> dict:
@@ -60,9 +63,50 @@ def get_insurance_expenses(
     if offset < 0:
         raise ValueError("Offset cannot be negative.")
 
+    # --------------------------------------------------
+    # Validate date range
+    # --------------------------------------------------
+
+    if (
+        start_date is not None
+        and end_date is not None
+        and start_date > end_date
+    ):
+        raise ValueError("Start date cannot be after end date.")
+
+    # --------------------------------------------------
+    # Build filters
+    # --------------------------------------------------
+
     filters = [
         InsuranceExpense.is_active.is_(True),
     ]
+
+    # --------------------------------------------------
+    # Start date
+    # --------------------------------------------------
+
+    if start_date is not None:
+        start_datetime = datetime.combine(
+            start_date,
+            time.min,
+        ).replace(tzinfo=timezone.utc)
+        filters.append(
+            InsuranceExpense.created_at >= start_datetime
+        )
+
+    # --------------------------------------------------
+    # End date
+    # --------------------------------------------------
+
+    if end_date is not None:
+        end_datetime = datetime.combine(
+            end_date + timedelta(days=1),
+            time.min,
+        ).replace(tzinfo=timezone.utc)
+        filters.append(
+            InsuranceExpense.created_at < end_datetime
+        )
 
     total = db.scalar(
         select(func.count()).select_from(InsuranceExpense).where(*filters)

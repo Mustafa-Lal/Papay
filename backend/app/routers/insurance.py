@@ -23,6 +23,7 @@ from app.schemas.insurance_finance import (
     InsuranceExpenseListResponse,
     InsuranceExpenseResponse,
     InsuranceExpenseUpdate,
+    InsuranceFinanceReportResponse,
     InsuranceIncomeCreate,
     InsuranceIncomeListResponse,
     InsuranceIncomeResponse,
@@ -53,6 +54,7 @@ from app.services.insurance_income import (
     get_insurance_incomes,
     update_insurance_income,
 )
+from app.services.insurance_finance_report import get_insurance_finance_report
 from app.models.insurance_image import InsuranceImageType
 
 router = APIRouter(prefix="/insurance")
@@ -448,6 +450,8 @@ def create_insurance_expense_endpoint(
     response_model=InsuranceExpenseListResponse,
 )
 def list_insurance_expenses_endpoint(
+    start_date: date | None = None,
+    end_date: date | None = None,
     limit: int = Query(default=10, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
     db: Session = Depends(get_db),
@@ -456,6 +460,8 @@ def list_insurance_expenses_endpoint(
     try:
         return get_insurance_expenses(
             db=db,
+            start_date=start_date,
+            end_date=end_date,
             limit=limit,
             offset=offset,
         )
@@ -557,6 +563,8 @@ def create_insurance_income_endpoint(
     response_model=InsuranceIncomeListResponse,
 )
 def list_insurance_incomes_endpoint(
+    start_date: date | None = None,
+    end_date: date | None = None,
     limit: int = Query(default=10, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
     db: Session = Depends(get_db),
@@ -565,6 +573,8 @@ def list_insurance_incomes_endpoint(
     try:
         return get_insurance_incomes(
             db=db,
+            start_date=start_date,
+            end_date=end_date,
             limit=limit,
             offset=offset,
         )
@@ -632,5 +642,39 @@ def delete_insurance_income_endpoint(
         ) from error
 
 
+# ---------------------------------------------------------
+# INSURANCE FINANCE REPORT ENDPOINT
+# ---------------------------------------------------------
 
+@router.get(
+    "/report",
+    response_model=InsuranceFinanceReportResponse,
+)
+def get_insurance_finance_report_endpoint(
+    start_date: date | None = None,
+    end_date: date | None = None,
+    db: Session = Depends(get_db),
+    _: AccessKey = Depends(get_current_access_key),
+):
+    """
+    Return a complete finance report for the given date range.
 
+    Combines all active expenses and incomes into a single payload with
+    pre-computed totals. No pagination — returns every record so the
+    frontend can render a full printable report.
+
+    - start_date / end_date are both optional (ISO-8601 date strings).
+    - Omitting both returns all records ever created.
+    - Returns 400 if start_date is after end_date.
+    """
+    try:
+        return get_insurance_finance_report(
+            db=db,
+            start_date=start_date,
+            end_date=end_date,
+        )
+    except ValueError as error:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(error),
+        ) from error
